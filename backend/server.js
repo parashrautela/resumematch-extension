@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');
 const PDFDocument = require('pdfkit');
-const PromptBuilder = require('../utils/promptBuilder');
+const PromptBuilder = require('./utils/promptBuilder');
 
 const app = express();
 const port = process.env.PORT || 3000;
