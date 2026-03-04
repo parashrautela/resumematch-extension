@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeMatch</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <h1 class="logo-text">ResumeMatch</h1>
+            </div>
+            <a href="#" id="edit-resume-link" class="edit-link hidden">Edit Resume</a>
+        </header>
+
+        <main id="main-content">
+            <!-- Onboarding View -->
+            <section id="view-onboarding" class="view hidden">
+                <h2>Let's set up your base resume</h2>
+                <p class="subtitle">Paste your resume once. We'll tailor it for every job you apply to.</p>
+
+                <div class="input-group">
+                    <label for="resume-input">Your Resume</label>
+                    <textarea id="resume-input" placeholder="Paste your full resume text here..."></textarea>
+                </div>
+
+                <div class="error-message hidden" id="onboarding-error"></div>
+
+                <div class="actions">
+                    <button id="save-onboarding-btn" class="btn-primary">Save Details</button>
+                    <a href="#" id="skip-onboarding-link" class="btn-link">Skip for now</a>
+                </div>
+            </section>
+
+            <!-- Idle View -->
+            <section id="view-idle" class="view hidden">
+                <div class="status-container">
+                    <div class="icon-placeholder neutral-icon"></div>
+                    <h2>No job post detected</h2>
+                    <p class="subtitle">Open a job listing on LinkedIn, Indeed, or any job board and click the
+                        extension.</p>
+                </div>
+                <div class="persistent-banner hidden" id="idle-warning">
+                    Add your resume and API key to unlock full features
+                </div>
+            </section>
+
+            <!-- Loading Analysis View -->
+            <section id="view-loading" class="view hidden">
+                <div class="loading-state">
+                    <h2 id="loading-status-text">Reading the job description…</h2>
+                    <div class="skeleton-container">
+                        <div class="skeleton-row">
+                            <div class="skeleton-chip"></div>
+                            <div class="skeleton-chip wide"></div>
+                            <div class="skeleton-chip"></div>
+                        </div>
+                        <div class="skeleton-row">
+                            <div class="skeleton-chip wide"></div>
+                            <div class="skeleton-chip"></div>
+                            <div class="skeleton-chip wide"></div>
+                            <div class="skeleton-chip"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results View -->
+            <section id="view-results" class="view hidden">
+                <div class="results-section">
+                    <h3>Critical Keywords <span class="badge" id="critical-count">0</span></h3>
+                    <p class="caption">Exact-match terms missing from your resume</p>
+                    <div class="chip-container" id="critical-chips">
+                        <!-- Chips injected here -->
+                    </div>
+                </div>
+
+                <div class="results-section mt-16">
+                    <h3>Recommended Phrases <span class="badge" id="recommended-count">0</span></h3>
+                    <p class="caption">Phrases the JD uses frequently</p>
+                    <div class="chip-container" id="recommended-chips">
+                        <!-- Chips injected here -->
+                    </div>
+                </div>
+
+                <div class="results-actions">
+                    <button id="generate-resume-btn" class="btn-primary">Generate My Tailored Resume →</button>
+                    <p class="caption center-text mt-8">Your resume will be rewritten to include these keywords
+                        naturally</p>
+                </div>
+            </section>
+
+            <!-- Generating View -->
+            <section id="view-generating" class="view hidden">
+                <div class="loading-state">
+                    <h2>Rewriting your resume for this role…</h2>
+                    <p class="subtitle">This takes about 10–20 seconds</p>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Success View -->
+            <section id="view-success" class="view hidden">
+                <div class="status-container">
+                    <div class="success-icon-container">
+                        <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                            <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none" />
+                            <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                        </svg>
+                    </div>
+                    <h2>Your resume is ready</h2>
+                    <p class="subtitle" id="success-summary">Ready to download</p>
+                </div>
+                <div class="actions mt-24">
+                    <button id="download-resume-btn" class="btn-primary">Download Resume (.pdf)</button>
+                </div>
+            </section>
+
+            <!-- Error View -->
+            <section id="view-error" class="view hidden">
+                <div class="status-container">
+                    <div class="icon-placeholder error-icon"></div>
+                    <h2 id="error-title">Error</h2>
+                    <p class="subtitle" id="error-message">Something went wrong.</p>
+                </div>
+                <div class="actions mt-24">
+                    <button id="retry-btn" class="btn-primary">Try Again</button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
