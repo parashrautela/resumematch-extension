@@ -337,7 +337,7 @@ async function handleDownloadResume() {
     const company = currentState.analysisData?.company_name || 'Role';
 
     try {
-        const response = await fetch('http://localhost:3000/api/pdf', {
+        const response = await fetch('https://resumematch-extension-production.up.railway.app/api/pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentState.generatedResume)

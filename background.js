@@ -27,7 +27,7 @@ async function handleAnalysis({ jdText }) {
     // Truncate JD to avoid blowing up context window unnecessarily
     const truncatedJd = jdText.substring(0, 15000);
 
-    const response = await fetch('http://localhost:3000/api/analyze', {
+    const response = await fetch('https://resumematch-extension-production.up.railway.app/api/analyze', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -49,7 +49,7 @@ async function handleGeneration({ jdText, resumeText, analysisData }) {
     // Truncate to save tokens
     const truncatedResume = resumeText.substring(0, 15000);
 
-    const response = await fetch('http://localhost:3000/api/generate', {
+    const response = await fetch('https://resumematch-extension-production.up.railway.app/api/generate', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
