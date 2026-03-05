@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeMatch — Set Up Your Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="onboarding.css">
+</head>
+
+<body>
+    <div class="onboarding-container">
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="step active" id="step-indicator-1">
+                <div class="step-dot">1</div>
+                <span>Upload Resume</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" id="step-indicator-2">
+                <div class="step-dot">2</div>
+                <span>Deep Dive Q&A</span>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" id="step-indicator-3">
+                <div class="step-dot">3</div>
+                <span>Answer Bank Ready</span>
+            </div>
+        </div>
+
+        <!-- Screen 1: Upload Resume -->
+        <section id="screen-upload" class="screen active">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h1>Upload Your Resume</h1>
+                    <p class="subtitle">We'll extract your experience and build a personalized Answer Bank you can use
+                        for any job application.</p>
+                </div>
+
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-zone-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 4L24 32M24 4L16 12M24 4L32 12" stroke="#5B4CF5" stroke-width="2.5"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M8 28V38C8 39.1046 8.89543 40 10 40H38C39.1046 40 40 39.1046 40 38V28"
+                                stroke="#5B4CF5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drop your resume PDF here</p>
+                    <p class="drop-zone-or">or</p>
+                    <label for="file-input" class="browse-btn">Browse File</label>
+                    <input type="file" id="file-input" accept=".pdf" hidden>
+                </div>
+
+                <div class="upload-error hidden" id="upload-error"></div>
+
+                <div class="upload-success hidden" id="upload-success">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <circle cx="10" cy="10" r="10" fill="#52C41A" />
+                        <path d="M6 10L9 13L14 7" stroke="white" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span>Resume uploaded ✓</span>
+                </div>
+
+                <p class="privacy-note">🔒 Your resume is stored only on this device. It is never uploaded to any
+                    server.</p>
+
+                <!-- Fallback textarea -->
+                <div class="fallback-section hidden" id="fallback-section">
+                    <p class="fallback-message">Extraction failed. Paste your resume text instead:</p>
+                    <textarea id="fallback-textarea" placeholder="Paste your full resume text here..."></textarea>
+                    <button class="btn-primary" id="fallback-save-btn">Continue with Pasted Text</button>
+                </div>
+
+                <div class="screen-footer">
+                    <a href="#" class="skip-link" id="skip-onboarding">Skip for now</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 2: Q&A Flow -->
+        <section id="screen-qa" class="screen">
+            <div class="screen-content">
+                <div class="qa-progress">
+                    <div class="qa-progress-bar">
+                        <div class="qa-progress-fill" id="qa-progress-fill"></div>
+                    </div>
+                    <p class="qa-progress-text" id="qa-progress-text">Project 1 of 3 — Question 1 of 5</p>
+                </div>
+
+                <div class="qa-project-header">
+                    <span class="qa-project-label">Current Project</span>
+                    <h2 class="qa-project-name" id="qa-project-name">Project Name</h2>
+                </div>
+
+                <div class="qa-question-area">
+                    <p class="qa-question-text" id="qa-question-text">Loading question...</p>
+                    <div class="qa-textarea-wrapper">
+                        <textarea id="qa-answer-input" placeholder="Type your answer here..."
+                            maxlength="500"></textarea>
+                        <span class="char-count" id="char-count">0 / 500</span>
+                    </div>
+                </div>
+
+                <div class="qa-actions">
+                    <button class="btn-primary" id="qa-next-btn" disabled>Next Question →</button>
+                    <a href="#" class="skip-link" id="qa-skip-question">Skip this question</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transition Screen Between Projects -->
+        <section id="screen-transition" class="screen">
+            <div class="screen-content centered">
+                <div class="transition-icon">✨</div>
+                <h2 class="transition-title" id="transition-title">Great work!</h2>
+                <p class="transition-subtitle" id="transition-subtitle">3 of 5 questions answered</p>
+                <p class="transition-next" id="transition-next">Now let's talk about <strong
+                        id="transition-project-name">Next Project</strong></p>
+                <button class="btn-primary" id="transition-continue-btn">Continue →</button>
+            </div>
+        </section>
+
+        <!-- Screen 3: Completion -->
+        <section id="screen-complete" class="screen">
+            <div class="screen-content centered">
+                <div class="completion-checkmark">
+                    <svg class="checkmark-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                    </svg>
+                </div>
+                <h1 class="completion-headline">Your Answer Bank is Ready</h1>
+                <p class="completion-summary" id="completion-summary">We've saved 0 answers across 0 projects.</p>
+                <p class="completion-subtext">You can access them anytime from the Answer Bank tab in the extension
+                    popup.</p>
+                <button class="btn-primary" id="completion-cta">Go to Answer Bank →</button>
+            </div>
+        </section>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay hidden" id="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p class="loading-text" id="loading-text">Analyzing your resume...</p>
+        </div>
+    </div>
+
+    <script src="lib/pdf.min.js"></script>
+    <script src="utils/pdfExtractor.js"></script>
+    <script src="onboarding.js"></script>
+</body>
+
+</html>

@@ -1,7 +1,12 @@
+/* ═══════════════════════════════════════════
+   ResumeMatch V2 — Popup Styles
+   ═══════════════════════════════════════════ */
+
 /* CSS Custom Properties (Design Tokens) */
 :root {
   --color-primary: #5B4CF5;
   --color-primary-hover: #4A3CD4;
+  --color-primary-light: rgba(91, 76, 245, 0.08);
   --color-critical-bg: #FFF1F0;
   --color-critical-border: #FF4D4F;
   --color-critical-text: #CF1322;
@@ -9,6 +14,7 @@
   --color-amber-border: #FAAD14;
   --color-amber-text: #874D00;
   --color-green: #52C41A;
+  --color-green-light: rgba(82, 196, 26, 0.1);
   --color-bg: #F8F8FC;
   --color-surface: #FFFFFF;
   --color-text-primary: #1A1A2E;
@@ -137,6 +143,61 @@ header {
 .edit-link:hover,
 .btn-link:hover {
   color: var(--color-primary);
+}
+
+/* ══════════════════════════════════════
+   TAB BAR (V2)
+   ══════════════════════════════════════ */
+.tab-bar {
+  display: flex;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 16px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 0;
+  font-family: var(--font-inter);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+}
+
+.tab.active {
+  color: var(--color-primary);
+  font-weight: 600;
+  border-bottom-color: var(--color-primary);
+}
+
+/* Tab Content */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: tabFadeIn 150ms ease-out;
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Main Content Area */
@@ -482,4 +543,211 @@ input:focus {
 
 .toast.show {
   opacity: 1;
+}
+
+/* ══════════════════════════════════════
+   ANSWER BANK TAB STYLES (V2)
+   ══════════════════════════════════════ */
+
+/* Empty State */
+.ab-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.ab-empty-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.ab-empty-state h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.ab-empty-state p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 20px;
+}
+
+.ab-start-btn {
+  max-width: 200px;
+}
+
+/* Project Accordion */
+.ab-project {
+  margin-bottom: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.ab-project-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  gap: 8px;
+}
+
+.ab-project-header:hover {
+  background: var(--color-primary-light);
+}
+
+.ab-project-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.ab-project-count {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ab-arrow {
+  color: var(--color-text-secondary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ab-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+/* Project Body (accordion content) */
+.ab-project-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease-out;
+}
+
+.ab-project-body.expanded {
+  max-height: 2000px;
+  transition: max-height 0.4s ease-in;
+}
+
+.ab-no-answers {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* Answer Card */
+.ab-answer-card {
+  padding: 12px 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.ab-question {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.ab-answer-text {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.ab-edit-textarea {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+  margin-bottom: 8px;
+  box-shadow: 0 0 0 2px rgba(91, 76, 245, 0.1);
+}
+
+.ab-edit-textarea:focus {
+  outline: none;
+}
+
+/* Answer Card Actions */
+.ab-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ab-btn-edit,
+.ab-btn-save,
+.ab-btn-copy {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font-inter);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ab-btn-edit {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.ab-btn-edit:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.ab-btn-save {
+  background: var(--color-primary);
+  color: white;
+}
+
+.ab-btn-save:hover {
+  background: var(--color-primary-hover);
+}
+
+.ab-btn-copy {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.ab-btn-copy:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.ab-btn-copy.copied {
+  background: var(--color-green-light);
+  color: var(--color-green);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
 }

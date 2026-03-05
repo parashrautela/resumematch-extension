@@ -1,7 +1,7 @@
 const PromptBuilder = {
 
-    buildKeywordExtractionPrompt: (jdText) => {
-        return `You are a senior recruiter and ATS expert with 10 years of hiring experience across all industries.
+  buildKeywordExtractionPrompt: (jdText) => {
+    return `You are a senior recruiter and ATS expert with 10 years of hiring experience across all industries.
 
 Analyze the following job description and extract:
 
@@ -34,21 +34,21 @@ Format:
 
 Job Description:
 ${jdText}`;
-    },
+  },
 
-    buildResumeGenerationPrompt: (jdText, resumeText, analysisData) => {
-        const jobTitle = analysisData.job_title || 'the target role';
-        const companyName = analysisData.company_name || 'the company';
-        const keywords = (analysisData.critical_keywords || []).join(', ');
-        const phrases = (analysisData.recommended_phrases || []).join(', ');
-        const bannedWords = (analysisData.banned_words_in_context || [
-            'passionate', 'hardworking', 'enthusiastic', 'dynamic', 'motivated',
-            'detail-oriented', 'team player', 'go-getter', 'results-driven', 'innovative thinker'
-        ]).join(', ');
-        const experienceLevel = analysisData.experience_level || 'Mid';
-        const prioritySection = analysisData.top_priority_section || 'Experience';
+  buildResumeGenerationPrompt: (jdText, resumeText, analysisData) => {
+    const jobTitle = analysisData.job_title || 'the target role';
+    const companyName = analysisData.company_name || 'the company';
+    const keywords = (analysisData.critical_keywords || []).join(', ');
+    const phrases = (analysisData.recommended_phrases || []).join(', ');
+    const bannedWords = (analysisData.banned_words_in_context || [
+      'passionate', 'hardworking', 'enthusiastic', 'dynamic', 'motivated',
+      'detail-oriented', 'team player', 'go-getter', 'results-driven', 'innovative thinker'
+    ]).join(', ');
+    const experienceLevel = analysisData.experience_level || 'Mid';
+    const prioritySection = analysisData.top_priority_section || 'Experience';
 
-        return `You are a senior resume writer and hiring expert with 10 years of experience across all industries. You understand exactly how resumes are evaluated — by ATS systems, by HR, and by hiring managers. Your job is to rewrite the candidate's resume so it passes all three levels of screening.
+    return `You are a senior resume writer and hiring expert with 10 years of experience across all industries. You understand exactly how resumes are evaluated — by ATS systems, by HR, and by hiring managers. Your job is to rewrite the candidate's resume so it passes all three levels of screening.
 
 ---
 
@@ -178,9 +178,64 @@ ${resumeText}
 
 Job Description:
 ${jdText}`;
+  },
+
+  // ── V2: Project Extraction from Resume ──
+  buildProjectExtractionPrompt: (resumeText) => {
+    return `You are reading a candidate's resume. Identify every distinct project, role, or significant experience mentioned. For each one, return:
+- A short project name (max 5 words)
+- The organisation or context it belongs to
+- One sentence describing what it involved
+
+Return ONLY valid JSON. No explanation. No markdown.
+
+Format:
+{
+  "projects": [
+    {
+      "id": "proj_001",
+      "name": "Checkout Flow Redesign",
+      "context": "Flipkart internship",
+      "summary": "Redesigned the mobile checkout experience to reduce drop-off"
     }
+  ]
+}
+
+Resume:
+${resumeText}`;
+  },
+
+  // ── V2: Question Generation Per Project ──
+  buildQuestionGenerationPrompt: (projectName, projectSummary) => {
+    return `You are conducting a structured interview to help a candidate articulate their experience on a specific project for job applications.
+
+Generate exactly 5 questions for this project. The questions must cover:
+1. The problem or gap that existed before the project started
+2. The candidate's specific personal contribution (not the team's)
+3. The primary skill or tool they used
+4. The measurable outcome or result
+5. The biggest challenge they faced and how they handled it
+
+Make the questions specific to the project summary provided. Do NOT use generic questions.
+
+Return ONLY valid JSON. No explanation. No markdown.
+
+Format:
+{
+  "questions": [
+    { "id": "q1", "type": "problem", "text": "Your question here" },
+    { "id": "q2", "type": "role", "text": "Your question here" },
+    { "id": "q3", "type": "skill", "text": "Your question here" },
+    { "id": "q4", "type": "outcome", "text": "Your question here" },
+    { "id": "q5", "type": "challenge", "text": "Your question here" }
+  ]
+}
+
+Project Name: ${projectName}
+Project Summary: ${projectSummary}`;
+  }
 };
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = PromptBuilder;
+  module.exports = PromptBuilder;
 }

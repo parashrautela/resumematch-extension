@@ -71,6 +71,67 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
+// V2: Project Extraction — detect projects from resume text
+// ──────────────────────────────────────────────────────────
+app.post('/api/extract-projects', async (req, res) => {
+    try {
+        const { resumeText } = req.body;
+
+        if (!resumeText) {
+            return res.status(400).json({ error: "Missing resumeText" });
+        }
+
+        const truncatedResume = resumeText.substring(0, 15000);
+        const promptText = PromptBuilder.buildProjectExtractionPrompt(truncatedResume);
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: promptText }],
+            response_format: { type: "json_object" }
+        });
+
+        const responseText = response.choices[0].message.content;
+        let cleanJsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(cleanJsonStr);
+
+        res.json({ projects: data.projects || [] });
+    } catch (error) {
+        console.error("Project Extraction Error:", error);
+        res.status(500).json({ error: "Failed to extract projects from resume" });
+    }
+});
+
+// ──────────────────────────────────────────────────────────
+// V2: Question Generation — generate interview questions per project
+// ──────────────────────────────────────────────────────────
+app.post('/api/generate-questions', async (req, res) => {
+    try {
+        const { projectName, projectSummary } = req.body;
+
+        if (!projectName || !projectSummary) {
+            return res.status(400).json({ error: "Missing projectName or projectSummary" });
+        }
+
+        const promptText = PromptBuilder.buildQuestionGenerationPrompt(projectName, projectSummary);
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: promptText }],
+            response_format: { type: "json_object" }
+        });
+
+        const responseText = response.choices[0].message.content;
+        let cleanJsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(cleanJsonStr);
+
+        res.json({ questions: data.questions || [] });
+    } catch (error) {
+        console.error("Question Generation Error:", error);
+        res.status(500).json({ error: "Failed to generate questions" });
+    }
+});
+
+// ──────────────────────────────────────────────────────────
 // PDF Generation endpoint — accepts structured JSON resume
 // ──────────────────────────────────────────────────────────
 app.post('/api/pdf', (req, res) => {

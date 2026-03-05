@@ -1,6 +1,11 @@
-// STATE MANAGEMENT
+// ══════════════════════════════════════════════
+// ResumeMatch V2 — Popup Logic
+// Two-tab structure: Job Match + Answer Bank
+// ══════════════════════════════════════════════
+
+// ── State ──
 const VIEWS = {
-    ONBOARDING: 'view-onboarding',
+    NO_RESUME: 'view-no-resume',
     IDLE: 'view-idle',
     LOADING: 'view-loading',
     RESULTS: 'view-results',
@@ -12,18 +17,17 @@ const VIEWS = {
 let currentState = {
     resume: null,
     jobData: null,
-    analysisData: null
+    analysisData: null,
+    generatedResume: null,
+    activeTab: 'job-match'
 };
 
-// DOM ELEMENTS
+// ── DOM Elements ──
 const views = Object.values(VIEWS).map(id => document.getElementById(id));
 const editResumeLink = document.getElementById('edit-resume-link');
-const resumeInput = document.getElementById('resume-input');
-const saveOnboardingBtn = document.getElementById('save-onboarding-btn');
-const skipOnboardingLink = document.getElementById('skip-onboarding-link');
-const onboardingError = document.getElementById('onboarding-error');
 const idleWarning = document.getElementById('idle-warning');
 
+// Job Match elements
 const criticalCount = document.getElementById('critical-count');
 const criticalChips = document.getElementById('critical-chips');
 const recommendedCount = document.getElementById('recommended-count');
@@ -36,55 +40,144 @@ const errorTitle = document.getElementById('error-title');
 const errorMessage = document.getElementById('error-message');
 const successSummary = document.getElementById('success-summary');
 const toastEl = document.getElementById('toast');
+const startOnboardingBtn = document.getElementById('start-onboarding-btn');
 
-// INITIALIZATION
+// Tab elements
+const tabBar = document.getElementById('tab-bar');
+const tabButtons = tabBar.querySelectorAll('.tab');
+const tabContentJobMatch = document.getElementById('tab-content-job-match');
+const tabContentAnswerBank = document.getElementById('tab-content-answer-bank');
+const answerBankContainer = document.getElementById('answer-bank-container');
+
+// ── Initialization ──
 document.addEventListener('DOMContentLoaded', async () => {
+    await migrateStorage();
     await loadStoredData();
     setupEventListeners();
+    setupTabListeners();
     checkCurrentTab();
+    loadAnswerBankTab();
 });
+
+// ── Storage Migration (V1 → V2) ──
+async function migrateStorage() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['user_resume', 'user_resume_text'], (result) => {
+            if (result.user_resume && !result.user_resume_text) {
+                // Migrate V1 key to V2 key
+                chrome.storage.local.set(
+                    { user_resume_text: result.user_resume },
+                    () => resolve()
+                );
+            } else {
+                resolve();
+            }
+        });
+    });
+}
 
 async function loadStoredData() {
     return new Promise((resolve) => {
-        chrome.storage.local.get(['user_resume'], (result) => {
-            currentState.resume = result.user_resume || null;
+        chrome.storage.local.get(['user_resume_text', 'last_active_tab'], (result) => {
+            currentState.resume = result.user_resume_text || null;
+
+            // Restore last active tab
+            if (result.last_active_tab === 'answer-bank') {
+                switchTab('answer-bank');
+            }
+
             resolve();
         });
     });
 }
 
 function setupEventListeners() {
-    saveOnboardingBtn.addEventListener('click', handleSaveOnboarding);
-    skipOnboardingLink.addEventListener('click', () => showView(VIEWS.IDLE, true));
-    editResumeLink.addEventListener('click', () => {
-        resumeInput.value = currentState.resume || '';
-        showView(VIEWS.ONBOARDING);
+    // Update resume link → opens onboarding
+    editResumeLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        openOnboarding();
     });
+
+    // Start onboarding button (no resume state)
+    if (startOnboardingBtn) {
+        startOnboardingBtn.addEventListener('click', () => {
+            openOnboarding();
+        });
+    }
 
     generateResumeBtn.addEventListener('click', handleGenerateResume);
     downloadResumeBtn.addEventListener('click', handleDownloadResume);
     retryBtn.addEventListener('click', checkCurrentTab);
 }
 
-// VIEW NAVIGATION
-function showView(viewId, forceIdle = false) {
+function setupTabListeners() {
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.getAttribute('data-tab');
+            switchTab(tabName);
+        });
+    });
+}
+
+// ── Tab Switching ──
+function switchTab(tabName) {
+    currentState.activeTab = tabName;
+
+    // Update tab button states
+    tabButtons.forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+    });
+
+    // Show/hide tab content
+    if (tabName === 'job-match') {
+        tabContentJobMatch.classList.add('active');
+        tabContentAnswerBank.classList.remove('active');
+        editResumeLink.classList.remove('hidden');
+    } else {
+        tabContentJobMatch.classList.remove('active');
+        tabContentAnswerBank.classList.add('active');
+        editResumeLink.classList.add('hidden');
+    }
+
+    // Persist tab choice
+    chrome.storage.local.set({ last_active_tab: tabName });
+}
+
+// ── Open Onboarding Tab ──
+function openOnboarding() {
+    const onboardingUrl = chrome.runtime.getURL('onboarding.html');
+    chrome.tabs.create({ url: onboardingUrl });
+}
+
+// ── Answer Bank Tab ──
+async function loadAnswerBankTab() {
+    const data = await AnswerBank.load();
+    AnswerBank.render(answerBankContainer, data);
+
+    // Bind the "Start Now" button if empty state
+    const startBtn = document.getElementById('ab-start-onboarding');
+    if (startBtn) {
+        startBtn.addEventListener('click', () => openOnboarding());
+    }
+}
+
+// ── View Navigation (Job Match tab only) ──
+function showView(viewId) {
     views.forEach(v => {
         if (v) v.classList.add('hidden');
     });
     const targetView = document.getElementById(viewId);
     if (targetView) targetView.classList.remove('hidden');
 
-    // Header link visibility
-    if (viewId === VIEWS.ONBOARDING) {
-        editResumeLink.classList.add('hidden');
-    } else {
+    // Show/hide header link
+    if (currentState.resume) {
         editResumeLink.classList.remove('hidden');
     }
 
     // Handle idle warnings
     if (viewId === VIEWS.IDLE && !currentState.resume) {
         idleWarning.classList.remove('hidden');
-    } else {
+    } else if (idleWarning) {
         idleWarning.classList.add('hidden');
     }
 }
@@ -99,37 +192,10 @@ function showToast(message) {
     }, 2000);
 }
 
-// EVENT HANDLERS
-async function handleSaveOnboarding() {
-    const resumeText = resumeInput.value.trim();
-
-    if (!resumeText) {
-        onboardingError.textContent = "Please paste your resume first.";
-        onboardingError.classList.remove('hidden');
-        return;
-    }
-
-    if (resumeText.split(' ').length < 50) {
-        // Just a warning, but we still save
-        showToast("Resume seems short, but saved!");
-    }
-
-    onboardingError.classList.add('hidden');
-
-    await chrome.storage.local.set({
-        'user_resume': resumeText
-    });
-
-    currentState.resume = resumeText;
-
-    showToast("Details saved ✓");
-    setTimeout(checkCurrentTab, 1000); // Check if we are on a JD now
-}
-
-// MAIN LOGIC FLOW
+// ── Main Logic Flow ──
 async function checkCurrentTab() {
     if (!currentState.resume) {
-        showView(VIEWS.ONBOARDING);
+        showView(VIEWS.NO_RESUME);
         return;
     }
 
@@ -175,7 +241,7 @@ async function checkCurrentTab() {
                         }
                     }
 
-                    // Strategy 2: Heuristic scoring 
+                    // Strategy 2: Heuristic scoring
                     const candidates = Array.from(document.querySelectorAll('div, section, article, main'));
                     let bestEl = null;
                     let highestScore = 0;

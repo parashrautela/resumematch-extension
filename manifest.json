@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "ResumeMatch",
-  "version": "1.0.0",
-  "description": "Tailor your resume to any job in 60 seconds",
+  "version": "2.0.0",
+  "description": "Tailor your resume and build your Answer Bank for any job",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
-    "downloads"
+    "downloads",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
@@ -31,6 +32,21 @@
       ],
       "js": [
         "content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/pdf.worker.min.js",
+        "onboarding.html",
+        "onboarding.css",
+        "onboarding.js",
+        "utils/pdfExtractor.js",
+        "lib/pdf.min.js"
+      ],
+      "matches": [
+        "<all_urls>"
       ]
     }
   ]

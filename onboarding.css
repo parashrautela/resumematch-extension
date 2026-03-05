@@ -1,0 +1,616 @@
+/* =============================================
+   ResumeMatch V2 — Onboarding Styles
+   Full-page onboarding in a new tab
+   ============================================= */
+
+:root {
+    --color-primary: #5B4CF5;
+    --color-primary-hover: #4A3CD4;
+    --color-primary-light: rgba(91, 76, 245, 0.08);
+    --color-primary-glow: rgba(91, 76, 245, 0.15);
+    --color-green: #52C41A;
+    --color-green-light: rgba(82, 196, 26, 0.1);
+    --color-critical-text: #CF1322;
+    --color-critical-bg: #FFF1F0;
+    --color-bg: #F8F8FC;
+    --color-surface: #FFFFFF;
+    --color-text-primary: #1A1A2E;
+    --color-text-secondary: #6B6B80;
+    --color-border: #E8E8F0;
+    --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-inter);
+    background: linear-gradient(135deg, #f5f3ff 0%, #F8F8FC 50%, #eef2ff 100%);
+    color: var(--color-text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+}
+
+/* Container */
+.onboarding-container {
+    width: 100%;
+    max-width: 640px;
+    position: relative;
+}
+
+/* ── Progress Steps (top bar) ── */
+.progress-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 40px;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step.completed {
+    opacity: 0.7;
+}
+
+.step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-border);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.step.active .step-dot {
+    background: var(--color-primary);
+    color: white;
+}
+
+.step.completed .step-dot {
+    background: var(--color-green);
+    color: white;
+}
+
+.step span {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+}
+
+.step.active span {
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.step-line {
+    width: 40px;
+    height: 2px;
+    background: var(--color-border);
+    border-radius: 1px;
+}
+
+/* ── Screens ── */
+.screen {
+    display: none;
+    animation: screenSlideIn 350ms ease-out;
+}
+
+.screen.active {
+    display: block;
+}
+
+@keyframes screenSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.screen-content {
+    background: var(--color-surface);
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.screen-content.centered {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ── Screen Header ── */
+.screen-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.screen-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--color-text-primary);
+}
+
+.screen-header .subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* ── Drop Zone ── */
+.drop-zone {
+    border: 2px dashed var(--color-border);
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: var(--color-bg);
+    margin-bottom: 16px;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+    box-shadow: 0 0 0 4px var(--color-primary-glow);
+}
+
+.drop-zone-icon {
+    margin-bottom: 16px;
+}
+
+.drop-zone-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+}
+
+.drop-zone-or {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+}
+
+.browse-btn {
+    display: inline-block;
+    padding: 8px 24px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+}
+
+.browse-btn:hover {
+    background: var(--color-primary-hover);
+}
+
+/* ── Upload States ── */
+.upload-error {
+    background: var(--color-critical-bg);
+    color: var(--color-critical-text);
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.upload-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--color-green-light);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-green);
+    margin-bottom: 12px;
+}
+
+.privacy-note {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    text-align: center;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+/* ── Fallback Section ── */
+.fallback-section {
+    margin-top: 20px;
+}
+
+.fallback-message {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+}
+
+.fallback-section textarea {
+    width: 100%;
+    height: 200px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    margin-bottom: 12px;
+}
+
+.fallback-section textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
+
+/* ── Skip Link ── */
+.skip-link {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.skip-link:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.screen-footer {
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* ── Q&A Progress ── */
+.qa-progress {
+    margin-bottom: 28px;
+}
+
+.qa-progress-bar {
+    height: 6px;
+    background: var(--color-border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.qa-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary), #7C6FF7);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+}
+
+.qa-progress-text {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+/* ── Q&A Project Header ── */
+.qa-project-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.qa-project-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.qa-project-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+/* ── Q&A Question Area ── */
+.qa-question-area {
+    margin-bottom: 24px;
+}
+
+.qa-question-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.qa-textarea-wrapper {
+    position: relative;
+}
+
+.qa-textarea-wrapper textarea {
+    width: 100%;
+    height: 120px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qa-textarea-wrapper textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
+
+.char-count {
+    position: absolute;
+    bottom: 10px;
+    right: 14px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    pointer-events: none;
+}
+
+/* ── Q&A Actions ── */
+.qa-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ── Transition Screen ── */
+.transition-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.transition-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.transition-subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin-bottom: 20px;
+}
+
+.transition-next {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin-bottom: 28px;
+}
+
+.transition-next strong {
+    color: var(--color-primary);
+}
+
+/* ── Completion Screen ── */
+.completion-checkmark {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 24px;
+}
+
+.checkmark-svg {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 2;
+    stroke: var(--color-green);
+    stroke-miterlimit: 10;
+    box-shadow: inset 0px 0px 0px var(--color-green);
+    animation: completionFill .4s ease-in-out .4s forwards, completionScale .3s ease-in-out .9s both;
+}
+
+.checkmark-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 2;
+    stroke-miterlimit: 10;
+    stroke: var(--color-green);
+    fill: none;
+    animation: completionStroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: completionStroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes completionStroke {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes completionScale {
+
+    0%,
+    100% {
+        transform: none;
+    }
+
+    50% {
+        transform: scale3d(1.1, 1.1, 1);
+    }
+}
+
+@keyframes completionFill {
+    100% {
+        box-shadow: inset 0px 0px 0px 30px rgba(82, 196, 26, 0.08);
+    }
+}
+
+.completion-headline {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--color-text-primary);
+}
+
+.completion-summary {
+    font-size: 15px;
+    color: var(--color-text-secondary);
+    margin-bottom: 8px;
+}
+
+.completion-subtext {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    margin-bottom: 32px;
+    max-width: 400px;
+}
+
+/* ── Buttons (shared) ── */
+.btn-primary {
+    width: 100%;
+    max-width: 320px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--color-primary), #7C6FF7);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-inter);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 14px rgba(91, 76, 245, 0.25);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(91, 76, 245, 0.35);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ── Loading Overlay ── */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 248, 252, 0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 44px;
+    height: 44px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+/* ── Utilities ── */
+.hidden {
+    display: none !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 680px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    .screen-content {
+        padding: 24px 20px;
+    }
+
+    .progress-steps {
+        gap: 6px;
+    }
+
+    .step span {
+        font-size: 11px;
+    }
+
+    .step-line {
+        width: 20px;
+    }
+}
