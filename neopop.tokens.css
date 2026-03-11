@@ -1,0 +1,69 @@
+/* ═══════════════════════════════════════════════════════
+   NeoPOP Design Token System — ResumeMatch
+   Inspired by CRED's NeoPOP (dark-first, 3D elevated, neon)
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+    /* ── Core Palette ── */
+    --np-black: #0d0d0d;
+    --np-surface: #1a1a1a;
+    --np-surface-elevated: #222222;
+    --np-surface-hover: #2a2a2a;
+    --np-white: #FFFFFF;
+    --np-white-soft: rgba(255, 255, 255, 0.88);
+    --np-white-muted: rgba(255, 255, 255, 0.55);
+
+    /* ── Neon Accent (Signature NeoPOP Green) ── */
+    --np-accent: #C2FF6D;
+    --np-accent-hover: #D4FF94;
+    --np-accent-shadow: #8DB84A;
+    --np-accent-glow: rgba(194, 255, 109, 0.15);
+    --np-accent-subtle: rgba(194, 255, 109, 0.08);
+    --np-accent-text: #0d0d0d;
+
+    /* ── Semantic Colors ── */
+    --np-danger: #FF3333;
+    --np-danger-shadow: #CC0000;
+    --np-danger-bg: rgba(255, 51, 51, 0.12);
+    --np-danger-text: #FF6B6B;
+
+    --np-warning: #FAAD14;
+    --np-warning-shadow: #C78800;
+    --np-warning-bg: rgba(250, 173, 20, 0.12);
+    --np-warning-text: #FFD666;
+
+    --np-success: #52C41A;
+    --np-success-shadow: #3A8C12;
+    --np-success-bg: rgba(82, 196, 26, 0.12);
+    --np-success-text: #73D944;
+
+    /* ── Borders ── */
+    --np-border: rgba(255, 255, 255, 0.08);
+    --np-border-strong: rgba(255, 255, 255, 0.15);
+    --np-border-accent: rgba(194, 255, 109, 0.25);
+
+    /* ── Typography ── */
+    --np-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* ── 3D Shadow System (NeoPOP Signature) ── */
+    --np-shadow-3d-sm: 2px 2px 0px;
+    --np-shadow-3d-md: 3px 3px 0px;
+    --np-shadow-3d-lg: 4px 4px 0px;
+
+    /* ── Depth Shadows ── */
+    --np-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --np-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --np-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --np-shadow-glow: 0 0 20px rgba(194, 255, 109, 0.15);
+
+    /* ── Border Radius ── */
+    --np-radius-xs: 4px;
+    --np-radius-sm: 8px;
+    --np-radius-md: 12px;
+    --np-radius-lg: 16px;
+    --np-radius-pill: 100px;
+
+    /* ── Timing ── */
+    --np-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --np-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -25,6 +25,7 @@ let currentState = {
 // ── DOM Elements ──
 const views = Object.values(VIEWS).map(id => document.getElementById(id));
 const editResumeLink = document.getElementById('edit-resume-link');
+const headerActions = document.getElementById('header-actions');
 const idleWarning = document.getElementById('idle-warning');
 
 // Job Match elements
@@ -48,6 +49,14 @@ const tabButtons = tabBar.querySelectorAll('.tab');
 const tabContentJobMatch = document.getElementById('tab-content-job-match');
 const tabContentAnswerBank = document.getElementById('tab-content-answer-bank');
 const answerBankContainer = document.getElementById('answer-bank-container');
+
+// Resume modal elements
+const resumeModal = document.getElementById('resume-modal');
+const resumeModalBody = document.getElementById('resume-modal-body');
+const resumeModalClose = document.getElementById('resume-modal-close');
+const resumeModalBackdrop = document.getElementById('resume-modal-backdrop');
+const resumeModalUpdateBtn = document.getElementById('resume-modal-update-btn');
+const viewResumeLink = document.getElementById('view-resume-link');
 
 // ── Initialization ──
 document.addEventListener('DOMContentLoaded', async () => {
@@ -108,6 +117,26 @@ function setupEventListeners() {
     generateResumeBtn.addEventListener('click', handleGenerateResume);
     downloadResumeBtn.addEventListener('click', handleDownloadResume);
     retryBtn.addEventListener('click', checkCurrentTab);
+
+    // View Resume modal listeners
+    if (viewResumeLink) {
+        viewResumeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openResumeModal();
+        });
+    }
+    if (resumeModalClose) {
+        resumeModalClose.addEventListener('click', closeResumeModal);
+    }
+    if (resumeModalBackdrop) {
+        resumeModalBackdrop.addEventListener('click', closeResumeModal);
+    }
+    if (resumeModalUpdateBtn) {
+        resumeModalUpdateBtn.addEventListener('click', () => {
+            closeResumeModal();
+            openOnboarding();
+        });
+    }
 }
 
 function setupTabListeners() {
@@ -132,11 +161,11 @@ function switchTab(tabName) {
     if (tabName === 'job-match') {
         tabContentJobMatch.classList.add('active');
         tabContentAnswerBank.classList.remove('active');
-        editResumeLink.classList.remove('hidden');
+        if (headerActions) headerActions.classList.remove('hidden');
     } else {
         tabContentJobMatch.classList.remove('active');
         tabContentAnswerBank.classList.add('active');
-        editResumeLink.classList.add('hidden');
+        if (headerActions) headerActions.classList.add('hidden');
     }
 
     // Persist tab choice
@@ -147,6 +176,30 @@ function switchTab(tabName) {
 function openOnboarding() {
     const onboardingUrl = chrome.runtime.getURL('onboarding.html');
     chrome.tabs.create({ url: onboardingUrl });
+}
+
+// ── Resume Preview Modal ──
+function openResumeModal() {
+    if (!resumeModal || !resumeModalBody) return;
+
+    if (currentState.resume && currentState.resume.trim().length > 0) {
+        // Render the resume text
+        const textEl = document.createElement('div');
+        textEl.className = 'resume-modal-text';
+        textEl.textContent = currentState.resume;
+        resumeModalBody.innerHTML = '';
+        resumeModalBody.appendChild(textEl);
+    } else {
+        resumeModalBody.innerHTML = '<p class="resume-modal-empty">No resume found. Upload one via onboarding.</p>';
+    }
+
+    resumeModal.classList.remove('hidden');
+}
+
+function closeResumeModal() {
+    if (resumeModal) {
+        resumeModal.classList.add('hidden');
+    }
 }
 
 // ── Answer Bank Tab ──
@@ -169,9 +222,9 @@ function showView(viewId) {
     const targetView = document.getElementById(viewId);
     if (targetView) targetView.classList.remove('hidden');
 
-    // Show/hide header link
-    if (currentState.resume) {
-        editResumeLink.classList.remove('hidden');
+    // Show/hide header actions
+    if (currentState.resume && headerActions) {
+        headerActions.classList.remove('hidden');
     }
 
     // Handle idle warnings

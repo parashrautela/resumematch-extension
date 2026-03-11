@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ResumeMatch — Set Up Your Profile</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="neopop.tokens.css">
     <link rel="stylesheet" href="onboarding.css">
 </head>
 
@@ -41,10 +42,10 @@
                 <div class="drop-zone" id="drop-zone">
                     <div class="drop-zone-icon">
                         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                            <path d="M24 4L24 32M24 4L16 12M24 4L32 12" stroke="#5B4CF5" stroke-width="2.5"
+                            <path d="M24 4L24 32M24 4L16 12M24 4L32 12" stroke="#C2FF6D" stroke-width="2.5"
                                 stroke-linecap="round" stroke-linejoin="round" />
                             <path d="M8 28V38C8 39.1046 8.89543 40 10 40H38C39.1046 40 40 39.1046 40 38V28"
-                                stroke="#5B4CF5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                stroke="#C2FF6D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </div>
                     <p class="drop-zone-text">Drop your resume PDF here</p>
@@ -57,8 +58,8 @@
 
                 <div class="upload-success hidden" id="upload-success">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <circle cx="10" cy="10" r="10" fill="#52C41A" />
-                        <path d="M6 10L9 13L14 7" stroke="white" stroke-width="2" stroke-linecap="round"
+                        <circle cx="10" cy="10" r="10" fill="#C2FF6D" />
+                        <path d="M6 10L9 13L14 7" stroke="#0d0d0d" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round" />
                     </svg>
                     <span>Resume uploaded ✓</span>
@@ -83,6 +84,18 @@
         <!-- Screen 2: Q&A Flow -->
         <section id="screen-qa" class="screen">
             <div class="screen-content">
+                <!-- Resume Context Bar -->
+                <div class="resume-context-bar" id="resume-context-bar">
+                    <div class="resume-context-info">
+                        <span class="resume-context-icon">📄</span>
+                        <span class="resume-context-name" id="resume-context-name">resume.pdf</span>
+                    </div>
+                    <button class="resume-change-btn" id="resume-change-btn">CHANGE RESUME →</button>
+                </div>
+
+                <!-- Back to Resume link -->
+                <a href="#" class="back-to-resume-link" id="back-to-resume-link">← BACK TO RESUME</a>
+
                 <div class="qa-progress">
                     <div class="qa-progress-bar">
                         <div class="qa-progress-fill" id="qa-progress-fill"></div>
@@ -105,8 +118,8 @@
                 </div>
 
                 <div class="qa-actions">
-                    <button class="btn-primary" id="qa-next-btn" disabled>Next Question →</button>
-                    <a href="#" class="skip-link" id="qa-skip-question">Skip this question</a>
+                    <button class="btn-primary" id="qa-next-btn" disabled>NEXT QUESTION →</button>
+                    <a href="#" class="skip-link" id="qa-skip-question">SKIP THIS QUESTION</a>
                 </div>
             </div>
         </section>
@@ -139,6 +152,23 @@
                 <button class="btn-primary" id="completion-cta">Go to Answer Bank →</button>
             </div>
         </section>
+
+        <!-- Change Resume Confirmation Modal -->
+        <div class="confirm-modal-overlay hidden" id="confirm-modal-overlay">
+            <div class="confirm-modal-backdrop" id="confirm-modal-backdrop"></div>
+            <div class="confirm-modal">
+                <h3 class="confirm-modal-title">CHANGE RESUME?</h3>
+                <p class="confirm-modal-body">You'll be taken back to re-upload. Your answers so far will be saved and
+                    questions will regenerate based on your new resume.</p>
+                <div class="confirm-modal-actions">
+                    <button class="confirm-modal-btn-cancel" id="confirm-modal-cancel">KEEP CURRENT</button>
+                    <button class="confirm-modal-btn-confirm" id="confirm-modal-confirm">YES, CHANGE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="onboarding-toast hidden" id="onboarding-toast"></div>
 
         <!-- Loading Overlay -->
         <div class="loading-overlay hidden" id="loading-overlay">

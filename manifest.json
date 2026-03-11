@@ -42,6 +42,7 @@
         "onboarding.html",
         "onboarding.css",
         "onboarding.js",
+        "neopop.tokens.css",
         "utils/pdfExtractor.js",
         "lib/pdf.min.js"
       ],

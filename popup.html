@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ResumeMatch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="neopop.tokens.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -14,7 +16,11 @@
             <div class="logo-container">
                 <h1 class="logo-text">ResumeMatch</h1>
             </div>
-            <a href="#" id="edit-resume-link" class="edit-link hidden">Update Resume</a>
+            <div class="header-actions hidden" id="header-actions">
+                <a href="#" id="view-resume-link" class="edit-link" title="View your stored resume">👁 View</a>
+                <span class="header-divider">·</span>
+                <a href="#" id="edit-resume-link" class="edit-link">Update</a>
+            </div>
         </header>
 
         <!-- Tab Navigation -->
@@ -33,7 +39,15 @@
                 <!-- No Resume State -->
                 <section id="view-no-resume" class="view hidden">
                     <div class="status-container">
-                        <div class="icon-placeholder neutral-icon"></div>
+                        <div class="icon-placeholder neutral-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666666"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="12" y1="18" x2="12" y2="12" />
+                                <line x1="9" y1="15" x2="15" y2="15" />
+                            </svg>
+                        </div>
                         <h2>Upload your resume first</h2>
                         <p class="subtitle">You need to upload your resume before we can analyze job descriptions.</p>
                     </div>
@@ -45,7 +59,13 @@
                 <!-- Idle View -->
                 <section id="view-idle" class="view hidden">
                     <div class="status-container">
-                        <div class="icon-placeholder neutral-icon"></div>
+                        <div class="icon-placeholder neutral-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#666666"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </div>
                         <h2>No job post detected</h2>
                         <p class="subtitle">Open a job listing on LinkedIn, Indeed, or any job board and click the
                             extension.</p>
@@ -131,7 +151,14 @@
                 <!-- Error View -->
                 <section id="view-error" class="view hidden">
                     <div class="status-container">
-                        <div class="icon-placeholder error-icon"></div>
+                        <div class="icon-placeholder error-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF3333"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="15" y1="9" x2="9" y2="15" />
+                                <line x1="9" y1="9" x2="15" y2="15" />
+                            </svg>
+                        </div>
                         <h2 id="error-title">Error</h2>
                         <p class="subtitle" id="error-message">Something went wrong.</p>
                     </div>
@@ -152,6 +179,29 @@
             </div>
 
         </main>
+
+        <!-- Resume Preview Modal -->
+        <div id="resume-modal" class="resume-modal hidden">
+            <div class="resume-modal-backdrop" id="resume-modal-backdrop"></div>
+            <div class="resume-modal-content">
+                <div class="resume-modal-header">
+                    <h3>Your Stored Resume</h3>
+                    <button id="resume-modal-close" class="resume-modal-close" title="Close">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="resume-modal-body" id="resume-modal-body">
+                    <p class="resume-modal-empty">No resume found. Upload one via onboarding.</p>
+                </div>
+                <div class="resume-modal-footer">
+                    <button id="resume-modal-update-btn" class="btn-primary">Update Resume</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Toast Notification -->
         <div id="toast" class="toast hidden"></div>

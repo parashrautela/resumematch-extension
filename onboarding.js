@@ -1,18 +1,22 @@
 /**
  * ResumeMatch V2 — Onboarding Logic
  * Handles: PDF upload → text extraction → project detection → Q&A flow → Answer Bank storage
+ * Includes: Resume change flow, back navigation, answer preservation
  */
 
 // ── State ──
 const state = {
     resumeText: null,
+    resumeFileName: null,
+    previousResumeText: null,
     projects: [],
     currentProjectIndex: 0,
     currentQuestionIndex: 0,
     currentQuestions: [],
     answerBank: [],
     answeredCount: 0,
-    totalQuestions: 0
+    totalQuestions: 0,
+    isResumeChange: false
 };
 
 // ── Backend URL ──
@@ -43,6 +47,18 @@ const elements = {
     skipOnboarding: document.getElementById('skip-onboarding'),
     loadingOverlay: document.getElementById('loading-overlay'),
     loadingText: document.getElementById('loading-text'),
+    // Resume Context Bar
+    resumeContextBar: document.getElementById('resume-context-bar'),
+    resumeContextName: document.getElementById('resume-context-name'),
+    resumeChangeBtn: document.getElementById('resume-change-btn'),
+    backToResumeLink: document.getElementById('back-to-resume-link'),
+    // Confirmation Modal
+    confirmModalOverlay: document.getElementById('confirm-modal-overlay'),
+    confirmModalBackdrop: document.getElementById('confirm-modal-backdrop'),
+    confirmModalCancel: document.getElementById('confirm-modal-cancel'),
+    confirmModalConfirm: document.getElementById('confirm-modal-confirm'),
+    // Toast
+    onboardingToast: document.getElementById('onboarding-toast'),
     // Q&A
     qaProgressFill: document.getElementById('qa-progress-fill'),
     qaProgressText: document.getElementById('qa-progress-text'),
@@ -69,11 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function checkExistingProgress() {
-    // Check if onboarding was interrupted mid-way
     const result = await chromeStorageGet(['onboarding_progress', 'onboarding_complete']);
 
     if (result.onboarding_complete) {
-        // Already completed — show completion
         showScreen('complete');
         return;
     }
@@ -81,12 +95,12 @@ async function checkExistingProgress() {
     if (result.onboarding_progress) {
         const progress = result.onboarding_progress;
         state.resumeText = progress.resumeText;
+        state.resumeFileName = progress.resumeFileName || 'resume.pdf';
         state.projects = progress.projects || [];
         state.answerBank = progress.answerBank || [];
         state.currentProjectIndex = progress.currentProjectIndex || 0;
 
         if (state.projects.length > 0 && state.currentProjectIndex < state.projects.length) {
-            // Resume Q&A from where they left off
             state.totalQuestions = state.projects.length * 5;
             state.answeredCount = progress.answeredCount || 0;
             startQAForProject(state.currentProjectIndex);
@@ -94,7 +108,6 @@ async function checkExistingProgress() {
         }
     }
 
-    // Fresh start — show upload screen
     showScreen('upload');
 }
 
@@ -145,9 +158,38 @@ function setupEventListeners() {
 
     // Completion
     elements.completionCta.addEventListener('click', handleCompletionCta);
+
+    // ── NEW: Resume Change / Back Navigation ──
+
+    // "CHANGE RESUME" button in context bar
+    elements.resumeChangeBtn.addEventListener('click', () => {
+        showConfirmModal();
+    });
+
+    // "← BACK TO RESUME" text link
+    elements.backToResumeLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showConfirmModal();
+    });
+
+    // Step 1 stepper click (handled via delegation since class changes)
+    stepIndicators.step1.addEventListener('click', () => {
+        if (stepIndicators.step1.classList.contains('completed')) {
+            showConfirmModal();
+        }
+    });
+
+    // Confirmation Modal — Cancel
+    elements.confirmModalCancel.addEventListener('click', hideConfirmModal);
+    elements.confirmModalBackdrop.addEventListener('click', hideConfirmModal);
+
+    // Confirmation Modal — Confirm
+    elements.confirmModalConfirm.addEventListener('click', handleConfirmResumeChange);
 }
 
-// ── Screen Navigation ──
+// ══════════════════════════════════════
+// SCREEN NAVIGATION
+// ══════════════════════════════════════
 function showScreen(screenName) {
     Object.values(screens).forEach(s => s.classList.remove('active'));
 
@@ -160,10 +202,27 @@ function showScreen(screenName) {
     const currentStep = stepMap[screenName] || 1;
 
     Object.values(stepIndicators).forEach((el, i) => {
-        el.classList.remove('active', 'completed');
-        if (i + 1 < currentStep) el.classList.add('completed');
+        el.classList.remove('active', 'completed', 'clickable');
+        if (i + 1 < currentStep) {
+            el.classList.add('completed');
+            // Make completed steps clickable (BUG FIX 2)
+            if (i + 1 === 1 && currentStep >= 2) {
+                el.classList.add('clickable');
+            }
+        }
         if (i + 1 === currentStep) el.classList.add('active');
     });
+
+    // Update resume context bar filename when showing Q&A
+    if (screenName === 'qa' || screenName === 'transition') {
+        updateResumeContextBar();
+    }
+}
+
+function updateResumeContextBar() {
+    if (elements.resumeContextName && state.resumeFileName) {
+        elements.resumeContextName.textContent = state.resumeFileName;
+    }
 }
 
 function showLoading(text) {
@@ -185,10 +244,66 @@ function hideUploadError() {
     elements.uploadError.classList.add('hidden');
 }
 
-// ── PDF Upload Handling ──
+// ══════════════════════════════════════
+// CONFIRMATION MODAL (BUG FIX 3)
+// ══════════════════════════════════════
+function showConfirmModal() {
+    elements.confirmModalOverlay.classList.remove('hidden');
+}
+
+function hideConfirmModal() {
+    elements.confirmModalOverlay.classList.add('hidden');
+}
+
+function handleConfirmResumeChange() {
+    hideConfirmModal();
+
+    // Save current answers before navigating back
+    state.previousResumeText = state.resumeText;
+    state.isResumeChange = true;
+
+    // Save progress so answers are preserved
+    saveProgress();
+
+    // Navigate back to upload screen
+    showScreen('upload');
+
+    // Reset upload UI
+    elements.uploadSuccess.classList.add('hidden');
+    hideUploadError();
+    elements.fallbackSection.classList.add('hidden');
+    elements.fileInput.value = '';
+}
+
+// ══════════════════════════════════════
+// TOAST NOTIFICATION (BUG FIX 4)
+// ══════════════════════════════════════
+function showOnboardingToast(message, duration = 4000) {
+    const toast = elements.onboardingToast;
+    toast.textContent = message;
+    toast.classList.remove('hidden');
+
+    // Force reflow to restart animation
+    toast.offsetHeight;
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 300);
+    }, duration);
+}
+
+// ══════════════════════════════════════
+// PDF UPLOAD HANDLING
+// ══════════════════════════════════════
 async function handleFileUpload(file) {
     hideUploadError();
     elements.uploadSuccess.classList.add('hidden');
+
+    // Track filename
+    state.resumeFileName = file.name || 'resume.pdf';
 
     try {
         showLoading('Extracting text from your resume...');
@@ -196,13 +311,20 @@ async function handleFileUpload(file) {
         state.resumeText = text;
 
         // Store immediately
-        await chromeStorageSet({ user_resume_text: text });
+        await chromeStorageSet({
+            user_resume_text: text,
+            user_resume_filename: state.resumeFileName
+        });
 
         hideLoading();
         elements.uploadSuccess.classList.remove('hidden');
 
-        // Wait 1 second then proceed to project detection
-        setTimeout(() => detectProjects(), 1000);
+        // Check if this is a resume change with smart diff
+        if (state.isResumeChange && state.previousResumeText) {
+            setTimeout(() => handleSmartResumeChange(text), 1000);
+        } else {
+            setTimeout(() => detectProjects(), 1000);
+        }
 
     } catch (err) {
         hideLoading();
@@ -229,15 +351,87 @@ async function handleFallbackSave() {
     }
 
     state.resumeText = text;
-    await chromeStorageSet({ user_resume_text: text });
+    state.resumeFileName = 'pasted_resume.txt';
+    await chromeStorageSet({
+        user_resume_text: text,
+        user_resume_filename: state.resumeFileName
+    });
 
     elements.uploadSuccess.classList.remove('hidden');
     hideUploadError();
 
-    setTimeout(() => detectProjects(), 1000);
+    if (state.isResumeChange && state.previousResumeText) {
+        setTimeout(() => handleSmartResumeChange(text), 1000);
+    } else {
+        setTimeout(() => detectProjects(), 1000);
+    }
 }
 
-// ── Project Detection ──
+// ══════════════════════════════════════
+// SMART RESUME CHANGE LOGIC (BUG FIX 4)
+// ══════════════════════════════════════
+async function handleSmartResumeChange(newText) {
+    const oldText = state.previousResumeText;
+    const changePercent = calculateTextDifference(oldText, newText);
+
+    if (changePercent > 30) {
+        // Substantially different — regenerate questions
+        showOnboardingToast('NEW RESUME DETECTED — QUESTIONS UPDATED');
+
+        // Reset Q&A state but preserve structure
+        state.answerBank = [];
+        state.answeredCount = 0;
+        state.currentProjectIndex = 0;
+        state.currentQuestionIndex = 0;
+        state.isResumeChange = false;
+        state.previousResumeText = null;
+
+        // Re-detect projects from new resume
+        detectProjects();
+    } else {
+        // Similar resume — keep existing questions and answers
+        showOnboardingToast('RESUME UPDATED — YOUR ANSWERS ARE PRESERVED');
+
+        state.isResumeChange = false;
+        state.previousResumeText = null;
+
+        // Save updated resume text and resume Q&A
+        await saveProgress();
+
+        // Resume Q&A from where user left off
+        if (state.projects.length > 0 && state.currentProjectIndex < state.projects.length) {
+            startQAForProject(state.currentProjectIndex);
+        } else {
+            detectProjects();
+        }
+    }
+}
+
+/**
+ * Calculate approximate percentage difference between two texts
+ * Uses word-level comparison for speed
+ */
+function calculateTextDifference(oldText, newText) {
+    if (!oldText || !newText) return 100;
+
+    const oldWords = new Set(oldText.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    const newWords = new Set(newText.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+
+    const totalWords = Math.max(oldWords.size, newWords.size);
+    if (totalWords === 0) return 100;
+
+    let matchCount = 0;
+    for (const word of oldWords) {
+        if (newWords.has(word)) matchCount++;
+    }
+
+    const similarity = (matchCount / totalWords) * 100;
+    return 100 - similarity;
+}
+
+// ══════════════════════════════════════
+// PROJECT DETECTION
+// ══════════════════════════════════════
 async function detectProjects() {
     showLoading('Analyzing your resume for projects...');
 
@@ -268,7 +462,6 @@ async function detectProjects() {
             answers: []
         }));
 
-        // Save progress
         await saveProgress();
 
         hideLoading();
@@ -281,7 +474,9 @@ async function detectProjects() {
     }
 }
 
-// ── Q&A Flow ──
+// ══════════════════════════════════════
+// Q&A FLOW
+// ══════════════════════════════════════
 async function startQAForProject(projectIndex) {
     state.currentProjectIndex = projectIndex;
     state.currentQuestionIndex = 0;
@@ -306,7 +501,6 @@ async function startQAForProject(projectIndex) {
         state.currentQuestions = result.questions || [];
 
         if (state.currentQuestions.length === 0) {
-            // skip project if no questions generated
             handleProjectComplete();
             return;
         }
@@ -318,7 +512,6 @@ async function startQAForProject(projectIndex) {
     } catch (err) {
         console.error('Question generation failed for project:', project.name, err);
         hideLoading();
-        // Skip this project silently
         handleProjectComplete();
     }
 }
@@ -379,7 +572,7 @@ async function saveCurrentAnswer(answer) {
         question_type: question.type,
         question_text: question.text,
         raw_answer: answer,
-        polished_answer: answer, // save raw for now, polish later
+        polished_answer: answer,
         last_updated: new Date().toISOString()
     });
 
@@ -391,7 +584,6 @@ function advanceQuestion() {
     state.currentQuestionIndex++;
 
     if (state.currentQuestionIndex >= state.currentQuestions.length) {
-        // Done with this project
         handleProjectComplete();
     } else {
         renderCurrentQuestion();
@@ -403,10 +595,8 @@ function handleProjectComplete() {
     const nextProjectIndex = projectIndex + 1;
 
     if (nextProjectIndex >= state.projects.length) {
-        // All projects done!
         completeOnboarding();
     } else {
-        // Show transition screen
         const answeredInProject = state.answerBank[projectIndex]?.answers?.length || 0;
         const totalInProject = state.currentQuestions.length;
         const nextProject = state.projects[nextProjectIndex];
@@ -423,7 +613,9 @@ function handleTransitionContinue() {
     startQAForProject(state.currentProjectIndex + 1);
 }
 
-// ── Completion ──
+// ══════════════════════════════════════
+// COMPLETION
+// ══════════════════════════════════════
 async function completeOnboarding() {
     const totalAnswers = state.answerBank.reduce((sum, p) => sum + p.answers.filter(a => a.raw_answer).length, 0);
     const totalProjects = state.answerBank.length;
@@ -431,28 +623,28 @@ async function completeOnboarding() {
     elements.completionSummary.textContent =
         `We've saved ${totalAnswers} answers across ${totalProjects} projects.`;
 
-    // Store answer bank and mark complete
     await chromeStorageSet({
         answer_bank: state.answerBank,
         onboarding_complete: true
     });
 
-    // Clean up progress
     await chromeStorageRemove(['onboarding_progress']);
 
     showScreen('complete');
 }
 
 function handleCompletionCta() {
-    // Close the onboarding tab
     window.close();
 }
 
-// ── Progress Persistence ──
+// ══════════════════════════════════════
+// PROGRESS PERSISTENCE
+// ══════════════════════════════════════
 async function saveProgress() {
     await chromeStorageSet({
         onboarding_progress: {
             resumeText: state.resumeText,
+            resumeFileName: state.resumeFileName,
             projects: state.projects,
             answerBank: state.answerBank,
             currentProjectIndex: state.currentProjectIndex,
@@ -461,7 +653,9 @@ async function saveProgress() {
     });
 }
 
-// ── Chrome Storage Helpers ──
+// ══════════════════════════════════════
+// CHROME STORAGE HELPERS
+// ══════════════════════════════════════
 function chromeStorageGet(keys) {
     return new Promise((resolve) => {
         chrome.storage.local.get(keys, (result) => resolve(result));
