@@ -19,7 +19,8 @@ let currentState = {
     jobData: null,
     analysisData: null,
     generatedResume: null,
-    activeTab: 'job-match'
+    activeTab: 'job-match',
+    dismissedKeywords: []  // { keyword, type: 'critical'|'recommended' }
 };
 
 // ── DOM Elements ──
@@ -65,7 +66,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     setupTabListeners();
     checkCurrentTab();
-    loadAnswerBankTab();
 });
 
 // ── Storage Migration (V1 → V2) ──
@@ -166,6 +166,11 @@ function switchTab(tabName) {
         tabContentJobMatch.classList.remove('active');
         tabContentAnswerBank.classList.add('active');
         if (headerActions) headerActions.classList.add('hidden');
+        
+        // Trigger Answer Generator logic
+        if (typeof AnswerGenerator !== 'undefined') {
+            AnswerGenerator.onTabActivated(currentState.jobData);
+        }
     }
 
     // Persist tab choice
@@ -202,17 +207,7 @@ function closeResumeModal() {
     }
 }
 
-// ── Answer Bank Tab ──
-async function loadAnswerBankTab() {
-    const data = await AnswerBank.load();
-    AnswerBank.render(answerBankContainer, data);
-
-    // Bind the "Start Now" button if empty state
-    const startBtn = document.getElementById('ab-start-onboarding');
-    if (startBtn) {
-        startBtn.addEventListener('click', () => openOnboarding());
-    }
-}
+ // AnswerGenerator handles its own logic inside answerbank.js
 
 // ── View Navigation (Job Match tab only) ──
 function showView(viewId) {
@@ -383,47 +378,157 @@ function displayResults(data) {
         return;
     }
 
-    criticalCount.textContent = critical.length;
-    recommendedCount.textContent = recommended.length;
+    // Reset dismissed state for fresh analysis
+    currentState.dismissedKeywords = [];
+
+    renderActiveChips(critical, recommended);
+    renderDismissedTray();
+    updateGenerateButtonState();
+    showView(VIEWS.RESULTS);
+}
+
+function renderActiveChips(critical, recommended) {
+    // Filter out dismissed
+    const dismissedSet = new Set(currentState.dismissedKeywords.map(d => d.keyword));
+    const activeCritical = (critical || currentState.analysisData?.critical_keywords || []).filter(k => !dismissedSet.has(k));
+    const activeRecommended = (recommended || currentState.analysisData?.recommended_phrases || []).filter(k => !dismissedSet.has(k));
+
+    criticalCount.textContent = activeCritical.length;
+    recommendedCount.textContent = activeRecommended.length;
 
     // Clear existing
     criticalChips.innerHTML = '';
     recommendedChips.innerHTML = '';
 
-    // Populate critical
-    critical.slice(0, 8).forEach((kw, i) => {
-        const chip = document.createElement('div');
-        chip.className = 'chip critical';
-        chip.textContent = kw;
-        chip.style.animationDelay = `${i * 30}ms`;
-        criticalChips.appendChild(chip);
+    // Populate critical with X button
+    activeCritical.slice(0, 8).forEach((kw, i) => {
+        criticalChips.appendChild(createActiveChip(kw, 'critical', i));
     });
-    if (critical.length > 8) {
+    if (activeCritical.length > 8) {
         const chip = document.createElement('div');
         chip.className = 'chip critical';
-        chip.textContent = `+${critical.length - 8} more`;
+        chip.textContent = `+${activeCritical.length - 8} more`;
         criticalChips.appendChild(chip);
     }
 
-    // Populate recommended
-    recommended.slice(0, 6).forEach((kw, i) => {
-        const chip = document.createElement('div');
-        chip.className = 'chip recommended';
-        chip.textContent = kw;
-        chip.style.animationDelay = `${i * 30}ms`;
-        recommendedChips.appendChild(chip);
+    // Populate recommended with X button
+    activeRecommended.slice(0, 6).forEach((kw, i) => {
+        recommendedChips.appendChild(createActiveChip(kw, 'recommended', i));
     });
+}
 
-    showView(VIEWS.RESULTS);
+function createActiveChip(keyword, type, index) {
+    const chip = document.createElement('div');
+    chip.className = `chip ${type}`;
+    chip.style.animationDelay = `${index * 30}ms`;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'chip-text';
+    textSpan.textContent = keyword;
+    chip.appendChild(textSpan);
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'chip-dismiss-btn';
+    dismissBtn.title = `Remove ${keyword}`;
+    dismissBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    dismissBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        handleDismissKeyword(keyword, type, chip);
+    });
+    chip.appendChild(dismissBtn);
+
+    return chip;
+}
+
+function handleDismissKeyword(keyword, type, chipEl) {
+    // Animate out
+    chipEl.classList.add('chip-exit');
+    chipEl.addEventListener('animationend', () => {
+        // Add to dismissed list
+        currentState.dismissedKeywords.push({ keyword, type });
+        // Re-render
+        renderActiveChips();
+        renderDismissedTray();
+        updateGenerateButtonState();
+    }, { once: true });
+}
+
+function handleRestoreKeyword(keyword, type) {
+    // Remove from dismissed
+    currentState.dismissedKeywords = currentState.dismissedKeywords.filter(d => d.keyword !== keyword);
+    // Re-render
+    renderActiveChips();
+    renderDismissedTray();
+    updateGenerateButtonState();
+}
+
+function renderDismissedTray() {
+    const tray = document.getElementById('dismissed-tray');
+    const chipsContainer = document.getElementById('dismissed-chips');
+    if (!tray || !chipsContainer) return;
+
+    if (currentState.dismissedKeywords.length === 0) {
+        tray.classList.add('hidden');
+        return;
+    }
+
+    tray.classList.remove('hidden');
+    chipsContainer.innerHTML = '';
+
+    currentState.dismissedKeywords.forEach(({ keyword, type }) => {
+        const chip = document.createElement('div');
+        chip.className = 'chip dismissed chip-enter';
+        chip.title = 'Click to restore';
+
+        chip.innerHTML = `<span class="chip-restore-icon">↩</span><span class="chip-text">${keyword}</span>`;
+        chip.addEventListener('click', () => handleRestoreKeyword(keyword, type));
+
+        chipsContainer.appendChild(chip);
+    });
+}
+
+function updateGenerateButtonState() {
+    const dismissedSet = new Set(currentState.dismissedKeywords.map(d => d.keyword));
+    const allCritical = currentState.analysisData?.critical_keywords || [];
+    const allRecommended = currentState.analysisData?.recommended_phrases || [];
+    const totalActive = allCritical.filter(k => !dismissedSet.has(k)).length +
+                        allRecommended.filter(k => !dismissedSet.has(k)).length;
+
+    const disabledMsg = document.getElementById('generate-disabled-msg');
+    const helpText = document.getElementById('generate-help-text');
+
+    if (totalActive === 0) {
+        generateResumeBtn.disabled = true;
+        if (disabledMsg) disabledMsg.classList.remove('hidden');
+        if (helpText) helpText.classList.add('hidden');
+    } else {
+        generateResumeBtn.disabled = false;
+        if (disabledMsg) disabledMsg.classList.add('hidden');
+        if (helpText) helpText.classList.remove('hidden');
+    }
 }
 
 function handleGenerateResume() {
     showView(VIEWS.GENERATING);
 
+    // Filter out dismissed keywords — only send active ones
+    const dismissedSet = new Set(currentState.dismissedKeywords.map(d => d.keyword));
+    const filteredAnalysis = {
+        ...currentState.analysisData,
+        critical_keywords: (currentState.analysisData.critical_keywords || []).filter(k => !dismissedSet.has(k)),
+        recommended_phrases: (currentState.analysisData.recommended_phrases || []).filter(k => !dismissedSet.has(k)),
+    };
+
+    console.log('Generating with active keywords only:', {
+        critical: filteredAnalysis.critical_keywords,
+        recommended: filteredAnalysis.recommended_phrases,
+        dismissed: currentState.dismissedKeywords.map(d => d.keyword)
+    });
+
     chrome.runtime.sendMessage({
         action: 'GENERATE_RESUME',
         jdText: currentState.jobData?.text || '',
-        analysisData: currentState.analysisData,
+        analysisData: filteredAnalysis,
         resumeText: currentState.resume
     }, (response) => {
         if (chrome.runtime.lastError || !response || response.error) {

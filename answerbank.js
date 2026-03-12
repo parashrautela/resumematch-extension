@@ -1,267 +1,374 @@
 /**
- * ResumeMatch V2 — Answer Bank Module
- * Handles reading, writing, editing, and copying answers from chrome.storage.local
+ * ResumeMatch V2 — Answer Generator Module
+ * Manages the Smart Answer Generator tab UI and logic.
  */
 
-const AnswerBank = {
+const AnswerGenerator = {
+    // State
+    state: {
+        projectContext: [],
+        lastAnswers: [],
+        detectedQuestion: null,
+        currentQuestion: null,
+        isGenerating: false,
+        jobData: null // From popup.js
+    },
 
-    /**
-     * Load the full answer bank from storage
-     * @returns {Promise<Array>} answer bank data
-     */
-    async load() {
+    // DOM Elements
+    elements: {},
+
+    // Initialize
+    async init() {
+        this.cacheElements();
+        this.bindEvents();
+        await this.loadState();
+    },
+
+    cacheElements() {
+        this.elements = {
+            viewEmpty: document.getElementById('view-ans-empty'),
+            viewIdle: document.getElementById('view-ans-idle'),
+            viewDetected: document.getElementById('view-ans-detected'),
+            viewLoading: document.getElementById('view-ans-loading'),
+            viewReady: document.getElementById('view-ans-ready'),
+
+            completeProfileBtn: document.getElementById('ans-complete-profile-btn'),
+            
+            manualInput: document.getElementById('ans-manual-input'),
+            generateManualBtn: document.getElementById('ans-generate-manual-btn'),
+
+            detectedText: document.getElementById('ans-detected-text'),
+            useDetectedBtn: document.getElementById('ans-use-detected-btn'),
+            enterDifferentLink: document.getElementById('ans-enter-different-link'),
+
+            loadingText: document.getElementById('ans-loading-text'),
+
+            resultQuestionLabel: document.getElementById('ans-result-question-label'),
+            resultText: document.getElementById('ans-result-text'),
+            copyBtn: document.getElementById('ans-copy-btn'),
+            regenerateLink: document.getElementById('ans-regenerate-link'),
+
+            recentSection: document.getElementById('recent-answers-section'),
+            recentList: document.getElementById('recent-answers-list'),
+        };
+    },
+
+    bindEvents() {
+        // Empty state
+        if (this.elements.completeProfileBtn) {
+            this.elements.completeProfileBtn.addEventListener('click', () => openOnboarding());
+        }
+
+        // Manual input
+        if (this.elements.manualInput) {
+            this.elements.manualInput.addEventListener('input', (e) => {
+                const text = e.target.value.trim();
+                this.elements.generateManualBtn.disabled = text.length < 20;
+            });
+        }
+
+        if (this.elements.generateManualBtn) {
+            this.elements.generateManualBtn.addEventListener('click', () => {
+                const q = this.elements.manualInput.value.trim();
+                if (q.length >= 20) this.generateAnswer(q, false);
+            });
+        }
+
+        // Detected state
+        if (this.elements.useDetectedBtn) {
+            this.elements.useDetectedBtn.addEventListener('click', () => {
+                if (this.state.detectedQuestion) {
+                    this.generateAnswer(this.state.detectedQuestion, false);
+                }
+            });
+        }
+
+        if (this.elements.enterDifferentLink) {
+            this.elements.enterDifferentLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.state.detectedQuestion = null;
+                this.showView(this.elements.viewIdle);
+            });
+        }
+
+        // Ready state
+        if (this.elements.copyBtn) {
+            this.elements.copyBtn.addEventListener('click', () => this.copyCurrentAnswer());
+        }
+
+        if (this.elements.regenerateLink) {
+            this.elements.regenerateLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (this.state.currentQuestion) {
+                    this.generateAnswer(this.state.currentQuestion, true);
+                }
+            });
+        }
+    },
+
+    async loadState() {
         return new Promise((resolve) => {
-            chrome.storage.local.get(['answer_bank'], (result) => {
-                resolve(result.answer_bank || []);
+            // Note: The PRD mentions 'project_context', but the old code stored it as 'answer_bank'.
+            // We use 'answer_bank' as the source of truth for the project context.
+            chrome.storage.local.get(['answer_bank', 'last_answers'], (result) => {
+                this.state.projectContext = result.answer_bank || [];
+                this.state.lastAnswers = result.last_answers || [];
+                resolve();
             });
         });
     },
 
     /**
-     * Save the full answer bank to storage
-     * @param {Array} answerBank 
+     * Called by popup.js when the Answer Generator tab is activated
      */
-    async save(answerBank) {
-        return new Promise((resolve) => {
-            chrome.storage.local.set({ answer_bank: answerBank }, () => resolve());
-        });
-    },
+    async onTabActivated(jobData) {
+        this.state.jobData = jobData;
+        
+        // Reload state to grab any new onboarding answers
+        await this.loadState();
 
-    /**
-     * Update a specific answer in the answer bank
-     * @param {string} projectId 
-     * @param {string} questionId 
-     * @param {string} newAnswer 
-     */
-    async updateAnswer(projectId, questionId, newAnswer) {
-        const bank = await this.load();
-        const project = bank.find(p => p.project_id === projectId);
-        if (project) {
-            const answer = project.answers.find(a => a.question_id === questionId);
-            if (answer) {
-                answer.raw_answer = newAnswer;
-                answer.polished_answer = newAnswer;
-                answer.last_updated = new Date().toISOString();
-                await this.save(bank);
-                return true;
-            }
-        }
-        return false;
-    },
-
-    /**
-     * Copy text to clipboard with fallback
-     * @param {string} text 
-     * @returns {Promise<boolean>} success
-     */
-    async copyToClipboard(text) {
-        try {
-            await navigator.clipboard.writeText(text);
-            return true;
-        } catch (err) {
-            // Fallback: create a temporary textarea
-            try {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.style.position = 'fixed';
-                textarea.style.opacity = '0';
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                return true;
-            } catch (fallbackErr) {
-                console.error('Copy failed:', fallbackErr);
-                return false;
-            }
-        }
-    },
-
-    /**
-     * Render the Answer Bank UI into a container
-     * @param {HTMLElement} container 
-     * @param {Array} data - answer bank data
-     */
-    render(container, data) {
-        container.innerHTML = '';
-
-        if (!data || data.length === 0) {
-            container.innerHTML = this.renderEmptyState();
+        if (this.state.projectContext.length === 0) {
+            this.showView(this.elements.viewEmpty);
             return;
         }
 
-        data.forEach((project, index) => {
-            const accordion = this.createProjectAccordion(project, index === 0);
-            container.appendChild(accordion);
-        });
-    },
+        this.renderRecentAnswers();
 
-    /**
-     * Render empty state HTML
-     */
-    renderEmptyState() {
-        return `
-            <div class="ab-empty-state">
-                <div class="ab-empty-icon">📋</div>
-                <h3>No answers yet</h3>
-                <p>Complete your profile to build your Answer Bank</p>
-                <button class="btn-primary ab-start-btn" id="ab-start-onboarding">Start Now →</button>
-            </div>
-        `;
-    },
-
-    /**
-     * Create a project accordion element
-     * @param {Object} project 
-     * @param {boolean} expanded 
-     * @returns {HTMLElement}
-     */
-    createProjectAccordion(project, expanded = false) {
-        const section = document.createElement('div');
-        section.className = 'ab-project';
-
-        const header = document.createElement('div');
-        header.className = 'ab-project-header';
-        header.innerHTML = `
-            <span class="ab-project-name">${this.escapeHtml(project.project_name)}</span>
-            <span class="ab-project-count">${project.answers.filter(a => a.raw_answer).length} answers</span>
-            <svg class="ab-arrow ${expanded ? 'expanded' : ''}" width="12" height="12" viewBox="0 0 12 12">
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            </svg>
-        `;
-
-        const body = document.createElement('div');
-        body.className = `ab-project-body ${expanded ? 'expanded' : ''}`;
-
-        // Render answer cards
-        const answersWithContent = project.answers.filter(a => a.raw_answer);
-        if (answersWithContent.length === 0) {
-            body.innerHTML = '<p class="ab-no-answers">No answers for this project yet.</p>';
-        } else {
-            answersWithContent.forEach(answer => {
-                const card = this.createAnswerCard(project.project_id, answer);
-                body.appendChild(card);
-            });
+        // Check if we are already showing a result
+        if (this.state.currentQuestion && !this.elements.viewReady.classList.contains('hidden')) {
+            return; // keep showing result
         }
 
-        // Toggle accordion
-        header.addEventListener('click', () => {
-            const arrow = header.querySelector('.ab-arrow');
-            const isExpanded = body.classList.contains('expanded');
-            body.classList.toggle('expanded');
-            arrow.classList.toggle('expanded');
-        });
+        // Try detecting a question on the active page
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const activeTab = tabs[0];
+            if (!activeTab || !activeTab.url || activeTab.url.startsWith('chrome://')) {
+                this.showView(this.elements.viewIdle);
+                return;
+            }
 
-        section.appendChild(header);
-        section.appendChild(body);
-        return section;
+            chrome.tabs.sendMessage(activeTab.id, { action: 'DETECT_QUESTION' }, (response) => {
+                if (chrome.runtime.lastError || !response) {
+                    this.showView(this.elements.viewIdle);
+                } else {
+                    this.state.detectedQuestion = response;
+                    this.elements.detectedText.textContent = `"${response}"`;
+                    this.showView(this.elements.viewDetected);
+                }
+            });
+        });
     },
 
-    /**
-     * Create an answer card element
-     * @param {string} projectId 
-     * @param {Object} answer 
-     * @returns {HTMLElement}
-     */
-    createAnswerCard(projectId, answer) {
-        const card = document.createElement('div');
-        card.className = 'ab-answer-card';
-
-        const questionEl = document.createElement('p');
-        questionEl.className = 'ab-question';
-        questionEl.textContent = answer.question_text;
-
-        const answerEl = document.createElement('div');
-        answerEl.className = 'ab-answer-content';
-
-        const answerText = document.createElement('p');
-        answerText.className = 'ab-answer-text';
-        answerText.textContent = answer.polished_answer || answer.raw_answer;
-
-        // Edit textarea (hidden by default)
-        const editArea = document.createElement('textarea');
-        editArea.className = 'ab-edit-textarea hidden';
-        editArea.value = answer.polished_answer || answer.raw_answer;
-
-        const actions = document.createElement('div');
-        actions.className = 'ab-actions';
-
-        // Edit button
-        const editBtn = document.createElement('button');
-        editBtn.className = 'ab-btn-edit';
-        editBtn.textContent = 'Edit';
-
-        // Save button (hidden)
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'ab-btn-save hidden';
-        saveBtn.textContent = 'Save';
-
-        // Copy button
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'ab-btn-copy';
-        copyBtn.textContent = 'Copy';
-
-        // Edit click
-        editBtn.addEventListener('click', () => {
-            answerText.classList.add('hidden');
-            editArea.classList.remove('hidden');
-            editBtn.classList.add('hidden');
-            saveBtn.classList.remove('hidden');
-            editArea.focus();
+    showView(viewToShow) {
+        const views = [
+            this.elements.viewEmpty,
+            this.elements.viewIdle,
+            this.elements.viewDetected,
+            this.elements.viewLoading,
+            this.elements.viewReady
+        ];
+        views.forEach(v => {
+            if (v) v.classList.add('hidden');
         });
 
-        // Save click
-        saveBtn.addEventListener('click', async () => {
-            const newText = editArea.value.trim();
-            if (newText) {
-                await this.updateAnswer(projectId, answer.question_id, newText);
-                answerText.textContent = newText;
-            }
-            answerText.classList.remove('hidden');
-            editArea.classList.add('hidden');
-            editBtn.classList.remove('hidden');
-            saveBtn.classList.add('hidden');
-        });
+        if (viewToShow) {
+            viewToShow.classList.remove('hidden');
+        }
 
-        // Copy click
-        copyBtn.addEventListener('click', async () => {
-            const text = answerText.textContent;
-            const success = await this.copyToClipboard(text);
-            if (success) {
-                copyBtn.textContent = 'Copied ✓';
-                copyBtn.classList.add('copied');
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copy';
-                    copyBtn.classList.remove('copied');
-                }, 2000);
-            } else {
-                copyBtn.textContent = 'Failed';
-                setTimeout(() => {
-                    copyBtn.textContent = 'Copy';
-                }, 2000);
-            }
-        });
-
-        actions.appendChild(editBtn);
-        actions.appendChild(saveBtn);
-        actions.appendChild(copyBtn);
-
-        answerEl.appendChild(answerText);
-        answerEl.appendChild(editArea);
-
-        card.appendChild(questionEl);
-        card.appendChild(answerEl);
-        card.appendChild(actions);
-
-        return card;
+        // Manage recent section visibility
+        if (viewToShow === this.elements.viewEmpty || viewToShow === this.elements.viewLoading) {
+            this.elements.recentSection.classList.add('hidden');
+        } else if (this.state.lastAnswers.length > 0) {
+            this.elements.recentSection.classList.remove('hidden');
+        }
     },
 
-    /**
-     * Escape HTML to prevent XSS
-     */
-    escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+    startCyclingLoadingText() {
+        const texts = [
+            "Reading your experience...",
+            "Matching to your projects...",
+            "Crafting your answer..."
+        ];
+        let i = 0;
+        this.elements.loadingText.textContent = texts[0];
+        
+        this.loadingInterval = setInterval(() => {
+            i = (i + 1) % texts.length;
+            this.elements.loadingText.textContent = texts[i];
+        }, 1500);
+    },
+
+    stopCyclingLoadingText() {
+        if (this.loadingInterval) {
+            clearInterval(this.loadingInterval);
+            this.loadingInterval = null;
+        }
+    },
+
+    async generateAnswer(question, isRegenerate = false) {
+        this.state.currentQuestion = question;
+        this.showView(this.elements.viewLoading);
+        this.startCyclingLoadingText();
+
+        chrome.runtime.sendMessage({
+            action: 'GENERATE_ANSWER',
+            question: question,
+            projectContext: this.state.projectContext,
+            jobData: this.state.jobData,
+            isRegenerate: isRegenerate
+        }, (response) => {
+            this.stopCyclingLoadingText();
+
+            if (chrome.runtime.lastError || !response || response.error) {
+                alert("Failed to generate answer. Returning to input.");
+                this.showView(this.elements.viewIdle);
+                return;
+            }
+
+            const answer = response.answer;
+            this.showReadyState(question, answer);
+            this.saveAnswerToHistory(question, answer);
+        });
+    },
+
+    showReadyState(question, answer) {
+        this.elements.resultQuestionLabel.textContent = question;
+        this.elements.resultText.textContent = answer;
+        
+        // Reset copy button
+        this.elements.copyBtn.textContent = 'COPY';
+        this.elements.copyBtn.classList.remove('copied');
+
+        this.showView(this.elements.viewReady);
+    },
+
+    async copyCurrentAnswer() {
+        const text = this.elements.resultText.textContent;
+        const btn = this.elements.copyBtn;
+
+        try {
+            await navigator.clipboard.writeText(text);
+            btn.textContent = 'COPIED ✓';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'COPY';
+                btn.classList.remove('copied');
+            }, 2000);
+        } catch (err) {
+            btn.textContent = 'FAILED';
+            setTimeout(() => {
+                btn.textContent = 'COPY';
+            }, 2000);
+            
+            // Allow manual selection
+            this.elements.resultText.style.userSelect = 'text';
+        }
+    },
+
+    saveAnswerToHistory(question, answer) {
+        const newEntry = {
+            question,
+            answer,
+            generated_at: new Date().toISOString()
+        };
+
+        // Add to front
+        this.state.lastAnswers.unshift(newEntry);
+
+        // Cap at 5
+        if (this.state.lastAnswers.length > 5) {
+            this.state.lastAnswers = this.state.lastAnswers.slice(0, 5);
+        }
+
+        // Save
+        chrome.storage.local.set({ last_answers: this.state.lastAnswers }, () => {
+            this.renderRecentAnswers();
+        });
+    },
+
+    renderRecentAnswers() {
+        const list = this.elements.recentList;
+        list.innerHTML = '';
+
+        if (this.state.lastAnswers.length === 0) {
+            this.elements.recentSection.classList.add('hidden');
+            return;
+        }
+
+        if (this.elements.viewEmpty.classList.contains('hidden') && 
+            this.elements.viewLoading.classList.contains('hidden')) {
+            this.elements.recentSection.classList.remove('hidden');
+        }
+
+        this.state.lastAnswers.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'recent-answer-card';
+
+            const header = document.createElement('div');
+            header.className = 'rac-header';
+
+            const qSpan = document.createElement('span');
+            qSpan.className = 'rac-question';
+            qSpan.textContent = item.question;
+
+            const previewSpan = document.createElement('span');
+            previewSpan.className = 'rac-preview';
+            previewSpan.textContent = item.answer.substring(0, 80) + '...';
+
+            header.appendChild(qSpan);
+            header.appendChild(previewSpan);
+
+            const body = document.createElement('div');
+            body.className = 'rac-body';
+
+            const fullAns = document.createElement('div');
+            fullAns.className = 'rac-full-answer';
+            fullAns.textContent = item.answer;
+
+            const actions = document.createElement('div');
+            actions.className = 'rac-actions';
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.textContent = 'COPY';
+
+            copyBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                    await navigator.clipboard.writeText(item.answer);
+                    copyBtn.textContent = 'COPIED ✓';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = 'COPY';
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    copyBtn.textContent = 'FAILED';
+                    setTimeout(() => copyBtn.textContent = 'COPY', 2000);
+                }
+            });
+
+            actions.appendChild(copyBtn);
+            body.appendChild(fullAns);
+            body.appendChild(actions);
+
+            card.appendChild(header);
+            card.appendChild(body);
+
+            header.addEventListener('click', () => {
+                // Collapse all others
+                Array.from(list.children).forEach(c => {
+                    if (c !== card) c.classList.remove('expanded');
+                });
+                card.classList.toggle('expanded');
+            });
+
+            list.appendChild(card);
+        });
     }
 };
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    AnswerGenerator.init();
+});

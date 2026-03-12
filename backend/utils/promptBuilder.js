@@ -233,6 +233,38 @@ Format:
 
 Project Name: ${projectName}
 Project Summary: ${projectSummary}`;
+  },
+
+  // ── V2: Smart Answer Generation ──
+  buildAnswerGenerationPrompt: (question, projectContext, jobData, isRegenerate = false) => {
+    let regenerateInstruction = "";
+    if (isRegenerate) {
+        regenerateInstruction = `\n\nWrite a completely different version of this answer. \nUse a different project or a different angle on the same project. \nDo not repeat the opening sentence from any previous version.`;
+    }
+
+    return `You are a job application assistant helping a candidate answer 
+a screening question on a job application form.
+
+Using ONLY the candidate's real project experience provided 
+below, write a specific, detailed answer to the application 
+question. 
+
+Rules:
+1. Use real details from the projects — do not invent anything
+2. Match the tone and language expected for the target role
+3. Structure the answer: situation → action → result
+4. Between 80 and 150 words
+5. First person only
+6. Do not start with "I" — start with context or situation
+
+Target Role: ${jobData?.title || 'the target role'} at ${jobData?.company || 'the target company'}
+Application Question: ${question}
+
+Candidate Project Context:
+${JSON.stringify(projectContext, null, 2)}
+
+Return ONLY the answer as plain text. 
+No explanation. No labels. No markdown.${regenerateInstruction}`;
   }
 };
 

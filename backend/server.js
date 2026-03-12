@@ -132,6 +132,34 @@ app.post('/api/generate-questions', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
+// V2: Smart Answer Generation — generates an answer to a custom question
+// ──────────────────────────────────────────────────────────
+app.post('/api/generate-answer', async (req, res) => {
+    try {
+        const { question, projectContext, jobData, isRegenerate } = req.body;
+
+        if (!question || !projectContext) {
+            return res.status(400).json({ error: "Missing question or projectContext" });
+        }
+
+        const promptText = PromptBuilder.buildAnswerGenerationPrompt(question, projectContext, jobData, isRegenerate);
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: promptText }]
+        });
+
+        // Prompt requests plain text, not JSON
+        const answer = response.choices[0].message.content.trim();
+
+        res.json({ answer });
+    } catch (error) {
+        console.error("Answer Generation Error:", error);
+        res.status(500).json({ error: "Failed to generate answer" });
+    }
+});
+
+// ──────────────────────────────────────────────────────────
 // PDF Generation endpoint — accepts structured JSON resume
 // ──────────────────────────────────────────────────────────
 app.post('/api/pdf', (req, res) => {

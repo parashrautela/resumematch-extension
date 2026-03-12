@@ -33,6 +33,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
+    // V2: Generate Smart Answer
+    if (request.action === 'GENERATE_ANSWER') {
+        handleGenerateAnswer(request)
+            .then(result => sendResponse(result))
+            .catch(err => sendResponse({ error: err.message }));
+        return true;
+    }
+
     // V2: Extract Projects from resume
     if (request.action === 'EXTRACT_PROJECTS') {
         handleExtractProjects(request)
@@ -158,6 +166,21 @@ async function handleGetQuestions({ projectName, projectSummary }) {
 
     const result = await response.json();
     return { questions: result.questions || [] };
+}
+
+async function handleGenerateAnswer({ question, projectContext, jobData, isRegenerate }) {
+    const response = await fetch(`${BACKEND_URL}/api/generate-answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, projectContext, jobData, isRegenerate })
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to generate answer.");
+    }
+
+    const result = await response.json();
+    return { answer: result.answer || "" };
 }
 
 // ── Legacy DOCX handler ──

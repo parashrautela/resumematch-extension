@@ -151,6 +151,73 @@
             const jdData = Parser.extract();
             sendResponse(jdData);
         }
+        
+        if (request.action === 'DETECT_QUESTION') {
+            // Check URL
+            const url = window.location.href.toLowerCase();
+            const validPatterns = ['apply', 'application', 'careers', 'jobs', 'submit', 'greenhouse', 'lever'];
+            const isValidUrl = validPatterns.some(pattern => url.includes(pattern));
+            
+            if (!isValidUrl) {
+                sendResponse(null);
+                return true;
+            }
+
+            // Look for textareas or large text inputs
+            const inputs = document.querySelectorAll('textarea, input[type="text"]');
+            const keywords = ['describe', 'tell us', 'explain', 'what', 'how', 'why', 'share', 'give an example'];
+            
+            let detectedQuestion = null;
+
+            for (const input of inputs) {
+                // If it's an input, it needs to be reasonably wide to be a long-form question
+                if (input.tagName === 'INPUT' && input.offsetWidth < 200) continue;
+
+                // Find the associated label
+                let labelText = '';
+                
+                // 1. Check for explicit <label for="...">
+                if (input.id) {
+                    const label = document.querySelector(`label[for="${input.id}"]`);
+                    if (label) labelText = label.innerText;
+                }
+                
+                // 2. Check if wrapped in <label>
+                if (!labelText) {
+                    const parentLabel = input.closest('label');
+                    if (parentLabel) labelText = parentLabel.innerText;
+                }
+
+                // 3. Fallback: check preceding elements (like divs/spans above the textarea)
+                if (!labelText) {
+                    let prev = input.previousElementSibling;
+                    while (prev && prev.tagName !== 'TEXTAREA' && prev.tagName !== 'INPUT' && !labelText) {
+                        if (prev.innerText && prev.innerText.trim().length > 10) {
+                            labelText = prev.innerText;
+                        }
+                        prev = prev.previousElementSibling;
+                    }
+                }
+
+                if (!labelText) continue;
+
+                const lowerLabel = labelText.toLowerCase();
+                const hasKeyword = keywords.some(kw => lowerLabel.includes(kw));
+
+                if (hasKeyword && labelText.length > 15 && labelText.length < 300) {
+                    // Clean up the label text (remove asterisks, "Required", etc)
+                    detectedQuestion = labelText
+                        .replace(/\*/g, '')
+                        .replace(/Required\s*$/i, '')
+                        .replace(/\n/g, ' ')
+                        .trim();
+                    break; // Stop at first good match
+                }
+            }
+            
+            sendResponse(detectedQuestion);
+        }
+        
         return true; // Keep the message channel open
     });
 })();

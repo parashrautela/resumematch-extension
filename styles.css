@@ -493,6 +493,111 @@ input:focus {
   box-shadow: 0 0 6px rgba(250, 173, 20, 0.5);
 }
 
+/* ── Chip Actions (Dismiss & Restore) ── */
+.chip-dismiss-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  margin-left: 2px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.chip-dismiss-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.chip-restore-icon {
+  margin-right: 4px;
+  opacity: 0.7;
+  font-weight: bold;
+}
+
+/* ── Dismissed Chips ── */
+.chip.dismissed {
+  background: var(--np-surface-elevated);
+  border-left: 3px solid var(--np-border-strong);
+  color: var(--np-white-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip.dismissed:hover {
+  background: var(--np-surface-hover);
+  color: var(--np-white);
+  border-left-color: var(--np-white);
+  transform: translateY(-1px);
+}
+
+.chip.dismissed::before {
+  display: none;
+}
+
+/* ── Dismissed Tray ── */
+.dismissed-tray {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--np-border);
+  animation: trayEnter 200ms ease-out forwards;
+}
+
+.dismissed-tray-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--np-white-muted);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* ── Animations ── */
+.chip-exit {
+  animation: chipExit 150ms ease-in forwards !important;
+}
+
+.chip-enter {
+  animation: chipEnter 150ms ease-out forwards;
+}
+
+@keyframes chipExit {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.95);
+  }
+}
+
+@keyframes chipEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes trayEnter {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+  }
+}
+
 /* ── Results Actions ── */
 .results-actions {
   margin-top: 20px;
@@ -798,7 +903,7 @@ input:focus {
 }
 
 .ab-project-body.expanded {
-  max-height: 2000px;
+  max-height: 500px;
   transition: max-height 0.5s var(--np-ease-smooth);
 }
 
@@ -1071,4 +1176,167 @@ input:focus {
 .resume-modal-footer .btn-primary {
   height: 38px;
   font-size: 12px;
+}
+
+/* ══════════════════════════════════════
+   SMART ANSWER GENERATOR STYLES
+   ══════════════════════════════════════ */
+
+.detected-banner {
+  background: var(--np-accent-subtle);
+  color: var(--np-accent);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 3px solid var(--np-accent);
+  margin-bottom: 16px;
+}
+
+.detected-dot {
+  color: var(--np-accent);
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; text-shadow: 0 0 8px var(--np-accent); }
+  100% { opacity: 0.4; }
+}
+
+.detected-question-box {
+  background: var(--np-surface);
+  border: 1px solid var(--np-border);
+  padding: 16px;
+  border-radius: 0;
+}
+
+.detected-question-box p {
+  font-size: 13px;
+  color: var(--np-white);
+  font-style: italic;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.answer-card {
+  background: var(--np-surface);
+  border: 1px solid var(--np-border-strong);
+  padding: 16px;
+  position: relative;
+  box-shadow: inset 4px 0 0 var(--np-accent);
+}
+
+.answer-text {
+  font-size: 13px;
+  color: var(--np-white);
+  line-height: 1.6;
+  margin-bottom: 30px;
+  white-space: pre-wrap;
+}
+
+.answer-actions {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+}
+
+.copy-btn {
+  background: var(--np-surface-elevated);
+  border: 1px solid var(--np-border-strong);
+  color: var(--np-white);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.copy-btn:hover {
+  background: var(--np-white);
+  color: var(--np-black);
+}
+
+.copy-btn.copied {
+  background: #14C25A !important;
+  color: #fff !important;
+  border-color: #14C25A !important;
+}
+
+/* Recent Answers */
+.recent-answers-section {
+  border-top: 1px solid var(--np-border);
+  padding-top: 16px;
+}
+
+.recent-answer-card {
+  background: var(--np-surface);
+  border: 1px solid var(--np-border);
+  margin-bottom: 8px;
+  border-left: 2px solid var(--np-border-strong);
+  transition: all 0.2s ease;
+}
+
+.recent-answer-card.expanded {
+  border-color: var(--np-border-strong);
+}
+
+.rac-header {
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rac-header:hover {
+  background: var(--np-surface-hover);
+}
+
+.rac-question {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--np-white);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rac-preview {
+  font-size: 11px;
+  color: var(--np-white-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rac-body {
+  padding: 0 12px 12px 12px;
+  display: none;
+  background: var(--np-surface);
+}
+
+.recent-answer-card.expanded .rac-body {
+  display: block;
+  border-top: 1px dashed var(--np-border);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.rac-full-answer {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--np-white-soft);
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+
+.rac-actions {
+  display: flex;
+  justify-content: flex-end;
 }
