@@ -208,17 +208,23 @@
                     </div>
                 </section>
 
-                <!-- Detected State -->
+                <!-- Detected State (Single or Multiple) -->
                 <section id="view-ans-detected" class="view hidden">
                     <div class="detected-banner">
-                        <span class="detected-dot">●</span> We found a question on this page
+                        <span class="detected-dot">●</span> <span id="ans-detected-count-text">We found a question on this page</span>
                     </div>
-                    <div class="detected-question-box">
+                    <!-- Single Question Preview -->
+                    <div class="detected-question-box" id="ans-single-question-preview">
                         <p id="ans-detected-text">"Describe a time you led a cross-functional design project"</p>
                     </div>
+                    <!-- Multiple Questions Preview -->
+                    <div class="detected-question-box hidden" id="ans-multi-question-preview" style="text-align: center;">
+                        <p class="subtitle" style="margin-bottom: 0;">Ready to answer the whole form?</p>
+                    </div>
+
                     <div class="actions mt-16">
-                        <button id="ans-use-detected-btn" class="btn-primary">USE THIS QUESTION</button>
-                        <a href="#" id="ans-enter-different-link" class="btn-link" style="margin-top: 8px;">Enter a different one</a>
+                        <button id="ans-use-detected-btn" class="btn-primary">ANSWER MY FORM</button>
+                        <a href="#" id="ans-enter-different-link" class="btn-link" style="margin-top: 8px;">Write single answer manually</a>
                     </div>
                 </section>
 
@@ -234,7 +240,23 @@
                     </div>
                 </section>
 
-                <!-- Result State -->
+                <!-- V3: Form Review State (Multiple Questions) -->
+                <section id="view-form-review" class="view hidden" style="display: flex; flex-direction: column; height: 100%;">
+                    <div style="flex-shrink: 0; padding-bottom: 12px; border-bottom: 1px solid var(--np-border); margin-bottom: 12px;">
+                        <h2 style="margin-bottom: 4px;">Review Answers</h2>
+                        <p class="subtitle" style="margin-bottom: 0; font-size: 11px;">Edit anything before filling the form</p>
+                    </div>
+                    
+                    <div id="form-review-list" class="form-review-list" style="flex: 1; overflow-y: auto; padding-right: 4px; margin-bottom: 16px;">
+                        <!-- Cards injected here via JS -->
+                    </div>
+
+                    <div class="actions mt-16" style="flex-shrink: 0;">
+                        <button id="ans-fill-form-btn" class="btn-primary">FILL FORM</button>
+                    </div>
+                </section>
+
+                <!-- Result State (Single Question fallback/legacy) -->
                 <section id="view-ans-ready" class="view hidden">
                     <p class="caption" id="ans-result-question-label" style="margin-bottom: 8px; color: var(--np-white-muted);">Describe a time you led a project</p>
                     <div class="answer-card">

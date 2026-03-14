@@ -218,6 +218,152 @@
             sendResponse(detectedQuestion);
         }
         
+        // ── V3 form scraper ──
+        if (request.action === 'SCRAPE_FORM') {
+            const inputs = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
+            const questions = [];
+            
+            // Words indicating Name/Email/Phone to skip
+            const skipPhrases = ['name', 'first', 'last', 'email', 'phone', 'mobile'];
+            
+            inputs.forEach((input, index) => {
+                // Ignore small text inputs
+                if (input.tagName === 'INPUT' && input.offsetWidth < 150) return;
+
+                let labelText = '';
+                
+                // 1. Check for explicit <label for="...">
+                if (input.id) {
+                    const label = document.querySelector(`label[for="${input.id}"]`);
+                    if (label) labelText = label.innerText;
+                }
+                
+                // 2. Check if wrapped in <label>
+                if (!labelText) {
+                    const parentLabel = input.closest('label');
+                    if (parentLabel) labelText = parentLabel.innerText;
+                }
+
+                // 3. Check aria-label
+                if (!labelText && input.getAttribute('aria-label')) {
+                    labelText = input.getAttribute('aria-label');
+                }
+
+                // 4. LinkedIn Easy Apply specific: find the closest grouping and get its label
+                if (!labelText && input.classList.contains('artdeco-text-input--input')) {
+                    const group = input.closest('.jobs-easy-apply-form-section__grouping');
+                    if (group) {
+                        const groupLabel = group.querySelector('.artdeco-text-input--label');
+                        if (groupLabel) labelText = groupLabel.innerText;
+                    }
+                }
+
+                // 5. Fallback: check preceding elements
+                if (!labelText) {
+                    let prev = input.previousElementSibling;
+                    let lookback = 0;
+                    while (prev && lookback < 3 && !labelText) {
+                        if (prev.innerText && prev.innerText.trim().length > 5 && !['TEXTAREA', 'INPUT', 'SELECT'].includes(prev.tagName)) {
+                            labelText = prev.innerText;
+                        }
+                        prev = prev.previousElementSibling;
+                        lookback++;
+                    }
+                }
+
+                // 6. Final fallback: placeholder
+                if (!labelText && input.placeholder) {
+                    labelText = input.placeholder;
+                }
+
+                if (!labelText) return;
+
+                const lowerLabel = labelText.toLowerCase();
+                
+                // Skip basic fields
+                if (skipPhrases.some(p => lowerLabel.includes(p))) return;
+                
+                // Keep if label is decently long or contains a question mark
+                if (labelText.length > 15 || labelText.includes('?')) {
+                    const cleanLabel = labelText.replace(/\*/g, '').replace(/Required\s*$/i, '').replace(/\n/g, ' ').trim();
+                    
+                    // Assign a stable selector to the field so we can inject into it later
+                    let selector = '';
+                    if (input.id) {
+                        selector = `#${input.id}`;
+                    } else if (input.name) {
+                        selector = `${input.tagName.toLowerCase()}[name="${input.name}"]`;
+                    } else {
+                        // Fallback data attribute to find it later
+                        const uniqueId = `rm_field_${index}_${Date.now()}`;
+                        input.setAttribute('data-rm-id', uniqueId);
+                        selector = `[data-rm-id="${uniqueId}"]`;
+                    }
+
+                    // Extract character limit if present via maxlength or nearby text
+                    let limit = null;
+                    if (input.getAttribute('maxlength')) {
+                        limit = parseInt(input.getAttribute('maxlength'));
+                    } else {
+                        const limitMatch = labelText.match(/max(?:imum)?\s*(\d+)\s*(?:chars|characters|words)/i);
+                        if (limitMatch && limitMatch[1]) {
+                            limit = parseInt(limitMatch[1]);
+                        }
+                    }
+
+                    questions.push({
+                        question_id: `q_${index}`,
+                        question_text: cleanLabel,
+                        field_selector: selector,
+                        field_type: input.tagName.toLowerCase(),
+                        character_limit: limit
+                    });
+                }
+            });
+            
+            sendResponse({ questions });
+        }
+
+        // ── V3 form filler ──
+        if (request.action === 'FILL_FORM') {
+            const { answers } = request;
+            let successCount = 0;
+            let failedQuestions = [];
+
+            answers.forEach(ans => {
+                const field = document.querySelector(ans.field_selector);
+                if (field) {
+                    try {
+                        // Try native setter first for React apps (like LinkedIn)
+                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                        const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+                        
+                        if (field.tagName === 'INPUT' && nativeInputValueSetter) {
+                            nativeInputValueSetter.call(field, ans.answer);
+                        } else if (field.tagName === 'TEXTAREA' && nativeTextAreaValueSetter) {
+                            nativeTextAreaValueSetter.call(field, ans.answer);
+                        } else {
+                            // Fallback
+                            field.value = ans.answer;
+                        }
+
+                        // Dispatch events to trigger JS frameworks
+                        field.dispatchEvent(new Event('input', { bubbles: true }));
+                        field.dispatchEvent(new Event('change', { bubbles: true }));
+                        
+                        successCount++;
+                    } catch (e) {
+                        console.error('Error filling field:', e);
+                        failedQuestions.push(ans.question_text);
+                    }
+                } else {
+                    failedQuestions.push(ans.question_text || `Question ${ans.question_id}`);
+                }
+            });
+
+            sendResponse({ successCount, failedQuestions });
+        }
+
         return true; // Keep the message channel open
     });
 })();

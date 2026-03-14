@@ -8,7 +8,9 @@ const AnswerGenerator = {
     state: {
         projectContext: [],
         lastAnswers: [],
-        detectedQuestion: null,
+        detectedQuestion: null, // Legacy single question
+        detectedQuestionsArray: [], // V3: Array of scraped question objects
+        formAnswers: [], // V3: Temporary hold for generated answers for review
         currentQuestion: null,
         isGenerating: false,
         jobData: null // From popup.js
@@ -31,17 +33,24 @@ const AnswerGenerator = {
             viewDetected: document.getElementById('view-ans-detected'),
             viewLoading: document.getElementById('view-ans-loading'),
             viewReady: document.getElementById('view-ans-ready'),
+            viewFormReview: document.getElementById('view-form-review'),
 
             completeProfileBtn: document.getElementById('ans-complete-profile-btn'),
             
             manualInput: document.getElementById('ans-manual-input'),
             generateManualBtn: document.getElementById('ans-generate-manual-btn'),
 
+            detectedCountText: document.getElementById('ans-detected-count-text'),
+            singleQuestionPreview: document.getElementById('ans-single-question-preview'),
+            multiQuestionPreview: document.getElementById('ans-multi-question-preview'),
             detectedText: document.getElementById('ans-detected-text'),
             useDetectedBtn: document.getElementById('ans-use-detected-btn'),
             enterDifferentLink: document.getElementById('ans-enter-different-link'),
 
             loadingText: document.getElementById('ans-loading-text'),
+
+            formReviewList: document.getElementById('form-review-list'),
+            fillFormBtn: document.getElementById('ans-fill-form-btn'),
 
             resultQuestionLabel: document.getElementById('ans-result-question-label'),
             resultText: document.getElementById('ans-result-text'),
@@ -77,7 +86,9 @@ const AnswerGenerator = {
         // Detected state
         if (this.elements.useDetectedBtn) {
             this.elements.useDetectedBtn.addEventListener('click', () => {
-                if (this.state.detectedQuestion) {
+                if (this.state.detectedQuestionsArray.length > 1) {
+                    this.generateFormAnswers(this.state.detectedQuestionsArray);
+                } else if (this.state.detectedQuestion) {
                     this.generateAnswer(this.state.detectedQuestion, false);
                 }
             });
@@ -87,7 +98,15 @@ const AnswerGenerator = {
             this.elements.enterDifferentLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.state.detectedQuestion = null;
+                this.state.detectedQuestionsArray = [];
                 this.showView(this.elements.viewIdle);
+            });
+        }
+
+        // Form Review state
+        if (this.elements.fillFormBtn) {
+            this.elements.fillFormBtn.addEventListener('click', () => {
+                this.fillAnswersIntoForm();
             });
         }
 
@@ -139,7 +158,7 @@ const AnswerGenerator = {
             return; // keep showing result
         }
 
-        // Try detecting a question on the active page
+        // Try detecting questions on the active page
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const activeTab = tabs[0];
             if (!activeTab || !activeTab.url || activeTab.url.startsWith('chrome://')) {
@@ -147,13 +166,45 @@ const AnswerGenerator = {
                 return;
             }
 
-            chrome.tabs.sendMessage(activeTab.id, { action: 'DETECT_QUESTION' }, (response) => {
-                if (chrome.runtime.lastError || !response) {
-                    this.showView(this.elements.viewIdle);
-                } else {
-                    this.state.detectedQuestion = response;
-                    this.elements.detectedText.textContent = `"${response}"`;
+            // V3: Try to scrape the full form
+            chrome.tabs.sendMessage(activeTab.id, { action: 'SCRAPE_FORM' }, (response) => {
+                if (!chrome.runtime.lastError && response && response.questions && response.questions.length > 0) {
+                    this.state.detectedQuestionsArray = response.questions;
+                    
+                    if (response.questions.length === 1) {
+                        this.state.detectedQuestion = response.questions[0].question_text;
+                        this.elements.detectedCountText.textContent = "We found a question on this page";
+                        this.elements.singleQuestionPreview.classList.remove('hidden');
+                        this.elements.multiQuestionPreview.classList.add('hidden');
+                        this.elements.detectedText.textContent = `"${this.state.detectedQuestion}"`;
+                        this.elements.useDetectedBtn.textContent = "ANSWER THIS QUESTION";
+                    } else {
+                        const count = response.questions.length;
+                        this.elements.detectedCountText.textContent = `We found ${count} questions on this form`;
+                        chrome.action.setBadgeText({ text: count.toString() });
+                        chrome.action.setBadgeBackgroundColor({ color: '#14C25A' });
+                        
+                        this.elements.singleQuestionPreview.classList.add('hidden');
+                        this.elements.multiQuestionPreview.classList.remove('hidden');
+                        this.elements.useDetectedBtn.textContent = "ANSWER MY FORM";
+                    }
                     this.showView(this.elements.viewDetected);
+                } else {
+                    // Fallback to legacy single question detection if SCRAPE_FORM fails
+                    chrome.tabs.sendMessage(activeTab.id, { action: 'DETECT_QUESTION' }, (fallbackResponse) => {
+                        if (chrome.runtime.lastError || !fallbackResponse) {
+                            this.showView(this.elements.viewIdle);
+                        } else {
+                            this.state.detectedQuestionsArray = [{ question_text: fallbackResponse, question_id: 'q_legacy' }];
+                            this.state.detectedQuestion = fallbackResponse;
+                            this.elements.detectedCountText.textContent = "We found a question on this page";
+                            this.elements.singleQuestionPreview.classList.remove('hidden');
+                            this.elements.multiQuestionPreview.classList.add('hidden');
+                            this.elements.detectedText.textContent = `"${fallbackResponse}"`;
+                            this.elements.useDetectedBtn.textContent = "ANSWER THIS QUESTION";
+                            this.showView(this.elements.viewDetected);
+                        }
+                    });
                 }
             });
         });
@@ -165,7 +216,8 @@ const AnswerGenerator = {
             this.elements.viewIdle,
             this.elements.viewDetected,
             this.elements.viewLoading,
-            this.elements.viewReady
+            this.elements.viewReady,
+            this.elements.viewFormReview
         ];
         views.forEach(v => {
             if (v) v.classList.add('hidden');
@@ -228,6 +280,192 @@ const AnswerGenerator = {
             const answer = response.answer;
             this.showReadyState(question, answer);
             this.saveAnswerToHistory(question, answer);
+        });
+    },
+
+    // ── V3: Generate Answers for the Entire Form ──
+    async generateFormAnswers(questionsArray) {
+        this.showView(this.elements.viewLoading);
+        this.startCyclingLoadingText();
+
+        // Get full resume text from storage for context
+        chrome.storage.local.get(['resume_text'], (res) => {
+            chrome.runtime.sendMessage({
+                action: 'GENERATE_FORM_ANSWERS',
+                questionsArray: questionsArray,
+                projectContext: this.state.projectContext,
+                jobData: this.state.jobData,
+                resumeText: res.resume_text || ""
+            }, (response) => {
+                this.stopCyclingLoadingText();
+
+                if (chrome.runtime.lastError || !response || response.error) {
+                    alert("Failed to generate form answers. Make sure the backend is running.");
+                    this.showView(this.elements.viewIdle);
+                    return;
+                }
+
+                // Merge answers with original questions
+                this.state.formAnswers = questionsArray.map(q => {
+                    const ansObj = response.answers.find(a => a.question_id === q.question_id);
+                    return {
+                        ...q,
+                        answer: ansObj ? ansObj.answer : ""
+                    };
+                });
+
+                this.renderFormReview();
+            });
+        });
+    },
+
+    renderFormReview() {
+        const list = this.elements.formReviewList;
+        list.innerHTML = '';
+
+        this.state.formAnswers.forEach((qa, idx) => {
+            const card = document.createElement('div');
+            card.className = 'frm-card';
+
+            // Top section: Question and limit
+            const qHeader = document.createElement('div');
+            qHeader.className = 'frm-question';
+            qHeader.textContent = qa.question_text;
+            if (qa.character_limit) {
+                const limitSpan = document.createElement('span');
+                limitSpan.className = 'frm-limit';
+                limitSpan.textContent = `(Max ${qa.character_limit} chars)`;
+                qHeader.appendChild(limitSpan);
+            }
+            card.appendChild(qHeader);
+
+            // Display Mode
+            const displayMode = document.createElement('div');
+            
+            const aText = document.createElement('div');
+            aText.className = 'frm-answer-text';
+            aText.textContent = qa.answer;
+            displayMode.appendChild(aText);
+
+            const displayActions = document.createElement('div');
+            displayActions.className = 'frm-actions';
+            const editBtn = document.createElement('button');
+            editBtn.className = 'frm-btn';
+            editBtn.textContent = 'EDIT';
+            displayActions.appendChild(editBtn);
+            displayMode.appendChild(displayActions);
+            
+            card.appendChild(displayMode);
+
+            // Edit Mode
+            const editMode = document.createElement('div');
+            editMode.style.display = 'none';
+
+            const textarea = document.createElement('textarea');
+            textarea.className = 'frm-edit-area';
+            textarea.value = qa.answer;
+            editMode.appendChild(textarea);
+
+            const counter = document.createElement('div');
+            counter.className = 'frm-char-count';
+            counter.textContent = `${qa.answer.length} chars`;
+            if (qa.character_limit && qa.answer.length > qa.character_limit) {
+                counter.classList.add('over-limit');
+            }
+            editMode.appendChild(counter);
+
+            textarea.addEventListener('input', () => {
+                const len = textarea.value.length;
+                counter.textContent = `${len} chars`;
+                if (qa.character_limit && len > qa.character_limit) {
+                    counter.classList.add('over-limit');
+                } else {
+                    counter.classList.remove('over-limit');
+                }
+            });
+
+            const editActions = document.createElement('div');
+            editActions.className = 'frm-actions';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'frm-btn';
+            cancelBtn.textContent = 'CANCEL';
+            
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'frm-btn save';
+            saveBtn.textContent = 'SAVE';
+
+            editActions.appendChild(cancelBtn);
+            editActions.appendChild(saveBtn);
+            editMode.appendChild(editActions);
+
+            card.appendChild(editMode);
+
+            // Interactions
+            editBtn.addEventListener('click', () => {
+                displayMode.style.display = 'none';
+                editMode.style.display = 'block';
+                textarea.value = qa.answer; // reset to current saved value
+                // trigger input to update counter
+                textarea.dispatchEvent(new Event('input'));
+                textarea.focus();
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                editMode.style.display = 'none';
+                displayMode.style.display = 'block';
+            });
+
+            saveBtn.addEventListener('click', () => {
+                qa.answer = textarea.value;
+                aText.textContent = qa.answer;
+                editMode.style.display = 'none';
+                displayMode.style.display = 'block';
+                // Also update history if we wanted to
+            });
+
+            list.appendChild(card);
+        });
+
+        this.showView(this.elements.viewFormReview);
+    },
+
+    async fillAnswersIntoForm() {
+        const btn = this.elements.fillFormBtn;
+        const orgText = btn.textContent;
+        btn.textContent = 'FILLING...';
+        btn.disabled = true;
+
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const activeTab = tabs[0];
+            if (!activeTab) return;
+
+            chrome.tabs.sendMessage(activeTab.id, { 
+                action: 'FILL_FORM',
+                answers: this.state.formAnswers
+            }, (response) => {
+                
+                if (chrome.runtime.lastError) {
+                    btn.textContent = 'FAILED';
+                    setTimeout(() => { btn.textContent = orgText; btn.disabled = false; }, 2000);
+                    return;
+                }
+
+                // Show success
+                btn.textContent = 'FILLED ✓';
+                btn.style.background = 'var(--np-success-bg)';
+                btn.style.color = 'var(--np-success-text)';
+                
+                // Clear the badge
+                chrome.action.setBadgeText({ text: '' });
+                
+                setTimeout(() => { 
+                    btn.textContent = orgText; 
+                    btn.disabled = false; 
+                    btn.style.background = '';
+                    btn.style.color = '';
+                }, 3000);
+            });
         });
     },
 

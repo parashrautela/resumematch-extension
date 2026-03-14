@@ -160,6 +160,41 @@ app.post('/api/generate-answer', async (req, res) => {
 });
 
 // ──────────────────────────────────────────────────────────
+// V3: Form Auto-Fill — generates answers for an entire form page
+// ──────────────────────────────────────────────────────────
+app.post('/api/generate-form-answers', async (req, res) => {
+    try {
+        const { questionsArray, resumeText, projectContext, jobData } = req.body;
+
+        if (!questionsArray || !Array.isArray(questionsArray)) {
+            return res.status(400).json({ error: "Missing or invalid questions array" });
+        }
+
+        const promptText = PromptBuilder.buildFormGenerationPrompt(
+            questionsArray, 
+            resumeText || "", 
+            projectContext || [], 
+            jobData || {}
+        );
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: promptText }],
+            response_format: { type: "json_object" }
+        });
+
+        const responseText = response.choices[0].message.content;
+        let cleanJsonStr = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(cleanJsonStr);
+
+        res.json({ answers: data.answers || [] });
+    } catch (error) {
+        console.error("Form Answers Generation Error:", error);
+        res.status(500).json({ error: "Failed to generate form answers" });
+    }
+});
+
+// ──────────────────────────────────────────────────────────
 // PDF Generation endpoint — accepts structured JSON resume
 // ──────────────────────────────────────────────────────────
 app.post('/api/pdf', (req, res) => {

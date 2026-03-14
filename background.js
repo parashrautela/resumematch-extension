@@ -183,6 +183,36 @@ async function handleGenerateAnswer({ question, projectContext, jobData, isRegen
     return { answer: result.answer || "" };
 }
 
+async function handleGenerateFormAnswers({ questionsArray, projectContext, jobData, resumeText }) {
+    const response = await fetch(`${BACKEND_URL}/api/generate-form-answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionsArray, projectContext, jobData, resumeText })
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to generate form answers.");
+    }
+
+    const result = await response.json();
+    return { answers: result.answers || [] };
+}
+
+async function handleGenerateFormAnswers({ questionsArray, projectContext, jobData, resumeText }) {
+    const response = await fetch(`${BACKEND_URL}/api/generate-form-answers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionsArray, projectContext, jobData, resumeText })
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to generate form answers.");
+    }
+
+    const result = await response.json();
+    return { answers: result.answers || [] };
+}
+
 // ── Legacy DOCX handler ──
 function handleDownloadDocx({ resumeText, jobTitle, companyName }) {
     // Placeholder from V1 — no-op for now

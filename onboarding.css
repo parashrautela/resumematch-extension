@@ -261,8 +261,11 @@ body::after {
     gap: 8px;
 }
 
-.resume-context-icon {
-    font-size: 16px;
+.resume-context-icon-img {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 4px;
 }
 
 .resume-context-name {

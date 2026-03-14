@@ -265,6 +265,45 @@ ${JSON.stringify(projectContext, null, 2)}
 
 Return ONLY the answer as plain text. 
 No explanation. No labels. No markdown.${regenerateInstruction}`;
+  },
+
+  // ── V3: Multi-Question Form Answer Generation ──
+  buildFormGenerationPrompt: (questionsArray, resumeText, projectContext, jobData) => {
+    return `You are a job application assistant. A candidate is filling out 
+a job application form. Using ONLY their real project experience 
+below, write a specific personalised answer to EACH question.
+
+Rules for every answer:
+1. Use real details from the candidate's projects — do not invent
+2. Structure each answer: situation → action → result
+3. First person only. Do not start any answer with "I"
+4. If a character limit is provided, keep the answer under that limit
+5. If no limit, keep answers between 80 and 150 words
+6. Match the tone expected for the target role
+7. Each answer must be distinct — do not repeat the same project
+   across multiple answers unless unavoidable
+
+Target Role: ${jobData?.title || 'the target role'} at ${jobData?.company || 'the target company'}
+
+Questions:
+${JSON.stringify(questionsArray, null, 2)}
+(Each item has: question_id, question_text, character_limit or null)
+
+Candidate Resume:
+${resumeText}
+
+Candidate Project Context:
+${JSON.stringify(projectContext, null, 2)}
+
+Return ONLY a valid JSON object. No explanation. No markdown.
+
+Format:
+{
+  "answers": [
+    { "question_id": "q_001", "answer": "Answer text here" },
+    { "question_id": "q_002", "answer": "Answer text here" }
+  ]
+}`;
   }
 };
 
